@@ -47,20 +47,20 @@ function pivot_steepest_edge(spx::SpxData)
 
     # compute the local slope
     # @show length(spx.r), length(spx.gamma)
-    s = (spx.r).^2 ./ spx.gamma
+    spx.s .= (spx.r).^2 ./ spx.gamma
 
     spx.enter = -1
     max_s = -Inf
     for j = 1:length(spx.r)
-        if s[j] > max_s
+        if spx.s[j] > max_s
             if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER && sign(spx.r[j]) > 0
                 spx.enter = spx.nonbasic[j]
                 spx.enter_pos = j
-                max_s = s[j]
+                max_s = spx.s[j]
             elseif spx.basis_status[spx.nonbasic[j]] == BASIS_AT_LOWER && sign(spx.r[j]) < 0
                 spx.enter = spx.nonbasic[j]
                 spx.enter_pos = j
-                max_s = s[j]
+                max_s = spx.s[j]
             end
         end
     end
@@ -70,26 +70,31 @@ end
 function compute_steepest_edge_weights(spx::SpxData)
     @timeit TO "compute steepest edge weights" begin
         if spx.iter == 1
-            spx.gamma = zeros(length(spx.nonbasic))
-            Threads.@threads for j = 1:length(spx.nonbasic)
-                g = spx.invB * spx.lpdata.A[:,spx.nonbasic[j]]
-                @inbounds spx.gamma[j] = g' * g
+            for j = 1:length(spx.nonbasic)
+                view_A_j = @view spx.lpdata.A[:,spx.nonbasic[j]]
+                spx.g .= spx.invB * view_A_j
+                # spx.g .= spx.invB * spx.view_nonbasic_A[:,j]
+                spx.gamma[j] = spx.g' * spx.g
             end
         else
             # Here, spx.enter and spx.leave were obtained from the previous iteration.
-            gamma_e = 1 + spx.d' * spx.d
             @timeit TO "gamma_j" begin
-                Threads.@threads for j = 1:length(spx.nonbasic)
-                    aj = Vector(spx.lpdata.A[:,spx.nonbasic[j]])
-                    alpha = transpose(spx.invB[:,spx.leave]) * aj
-                    @inbounds spx.gamma[j] = spx.gamma[j] + 2 * alpha * aj' * spx.v + alpha^2 * gamma_e
-                end
+                view_invB_leave = @view spx.invB[:,spx.leave]
+            #     gamma_e = 1 + spx.d' * spx.d
+            #     Threads.@threads for j = 1:length(spx.nonbasic)
+            #         alpha = view_invB_leave' * spx.view_nonbasic_A[:,j]
+            #         @inbounds spx.gamma[j] += 2 * alpha * spx.view_nonbasic_A[:,j]' * spx.v + alpha^2 * gamma_e
+            #     end
+                spx.gamma .+= 2 .* (spx.view_nonbasic_A' * view_invB_leave) .* (spx.view_nonbasic_A' * spx.v) .+ (spx.view_nonbasic_A' * view_invB_leave).^2 .* (1 + spx.d' * spx.d)
             end
 
             @timeit TO "gamm_e" begin
+                view_A_enter = @view spx.lpdata.A[:,spx.nonbasic[spx.enter_pos]]
                 # spx.gamma[spx.enter_pos] = gamma_e / spx.d[spx.leave]^2
-                g = spx.invB * spx.lpdata.A[:,spx.nonbasic[spx.enter_pos]]
-                spx.gamma[spx.enter_pos] = g' * g
+                # g = spx.invB * view_A_enter
+                # spx.gamma[spx.enter_pos] = g' * g
+                spx.g .= spx.invB * view_A_enter
+                spx.gamma[spx.enter_pos] = spx.g' * spx.g
             end
         end
     end
@@ -121,4 +126,31 @@ function pivot_Dantzig(spx::SpxData)
         end
     end
     # @show spx.enter, spx.r[spx.enter_pos]
+end
+
+# Pivot to remove artificial variables from basis (based on Bland's rule)
+function pivot_to_remove_artificials(spx::SpxData)
+    spx.enter = -1
+
+    # compute reduced cost
+    compute_reduced_cost(spx)
+
+    min_enter = spx.start_artvars
+    for j = 1:length(spx.r)
+        if spx.nonbasic[j] < min_enter
+            if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER
+                if spx.r[j] > -1e-10
+                    spx.enter = spx.nonbasic[j]
+                    spx.enter_pos = j
+                    min_enter = spx.enter
+                end
+            else
+                if spx.r[j] < +1e-10
+                    spx.enter = spx.nonbasic[j]
+                    spx.enter_pos = j
+                    min_enter = spx.enter
+                end
+            end
+        end
+    end
 end

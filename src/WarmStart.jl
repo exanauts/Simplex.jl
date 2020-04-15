@@ -54,7 +54,7 @@ function set_basis(spx::SpxData, basis::Vector{Int}, basis_status::Vector{Int})
     set_nonbasic(spx)
 end
 
-function set_basis(spx::SpxData{T}, x::Vector{T}) where T
+function set_basis(spx::SpxData{T}, x::T) where T
     spx.basis_status = Vector{Int}(undef, spx.lpdata.ncols)
     spx.basic = Int[]
     spx.nonbasic = Int[]
@@ -75,7 +75,7 @@ function set_basis(spx::SpxData{T}, x::Vector{T}) where T
             push!(spx.nonbasic, j)
         end
     end
-    spx.x = x
+    spx.x .= x
 end
 
 function set_nonbasic(spx::SpxData)

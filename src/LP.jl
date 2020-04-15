@@ -2,25 +2,36 @@
 Linear programming problem
 """
 
-mutable struct LpData{T<:Number}
+mutable struct LpData{T<:AbstractArray}
     nrows::Int
     ncols::Int
-    A::SparseMatrixCSC{T,Int}
-    bl::Vector{T}
-    bu::Vector{T}
-    c::Vector{T}
-    xl::Vector{T}
-    xu::Vector{T}
 
-    x::Vector{T}
+    A  # constraint matrix
+    bl::T # row lower bound vector
+    bu::T # row upper bound vector
+    c::T  # linear objective coefficient vector
+    xl::T # column lower bound vector
+    xu::T # column upper bound vector
+    x::T  # column solution vector
+
+    rd::T # temp for scaling
+    cd::T # temp for scaling
+
     status::Int
-
     is_canonical::Bool
+    TArray
 
-    function LpData(c::Vector{T}, xl::Vector{T}, xu::Vector{T}, 
-            A::SparseMatrixCSC{T,Int}, bl::Vector{T}, bu::Vector{T},
-            x0::Vector{T} = T[]) where T
-        lp = new{T}()
+    function LpData(c::Array, xl::Array, xu::Array, 
+            A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
+            x0::Array = Float64[],
+            TArray = CuArray)
+
+        # Check the array type
+        if !in(TArray,[CuArray,Array])
+            error("Unkown array type $TArray.")
+        end
+
+        lp = new{TArray}()
         lp.nrows, lp.ncols = size(A)
 
         @assert lp.nrows == length(bl)
@@ -29,20 +40,48 @@ mutable struct LpData{T<:Number}
         @assert lp.ncols == length(xl)
         @assert lp.ncols == length(xu)
 
-        lp.A = A; lp.bl = bl; lp.bu = bu;
-        lp.c = c; lp.xl = xl; lp.xu = xu;
+        lp.bl = TArray{Float64}(undef, lp.nrows)
+        lp.bu = TArray{Float64}(undef, lp.nrows)
+        lp.c = TArray{Float64}(undef, lp.ncols)
+        lp.xl = TArray{Float64}(undef, lp.ncols)
+        lp.xu = TArray{Float64}(undef, lp.ncols)
+        lp.x = TArray{Float64}(undef, lp.ncols)
+
+        lp.rd = TArray{Float64}(undef, lp.nrows)
+        lp.cd = TArray{Float64}(undef, lp.ncols)
+
+        copyto!(lp.bl, bl)
+        copyto!(lp.bu, bu)
+        copyto!(lp.c, c)
+        copyto!(lp.xl, xl)
+        copyto!(lp.xu, xu)
+        
+        # copy initial solution; or zeros
         if length(x0) == lp.ncols
-            lp.x = x0
+            copyto!(lp.x, x0)
+        else
+            fill!(lp.x, 0)
         end
+
+        # DENSE A matrix
+        lp.A = TArray == CuArray ? TArray{Float64,2}(Matrix(A)) : A
+        # lp.A = TArray == CuVector ? CuArrays.CUSPARSE.CuSparseMatrixCSC(A) : A
 
         lp.status = STAT_NOT_SOLVED
         lp.is_canonical = false
+        lp.TArray = TArray
 
         return lp
     end
 end
 
-function canonical_form(standard::LpData)
+LpData(c::Vector{T}, xl::Vector{T}, xu::Vector{T}, 
+    A::SparseMatrixCSC{T,Int}, bl::Vector{T}, bu::Vector{T},
+    TArray) where T = LpData(c, xl, xu, A, bl, bu, T[], TArray)
+
+cpu2gpu(lp::LpData{Array}) = LpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
+
+function canonical_form(standard::LpData)::LpData
     # count the number of inequality constraints
     ineq = Int[]
     for i = 1:standard.nrows
@@ -56,22 +95,22 @@ function canonical_form(standard::LpData)
     ncols = standard.ncols + nineq
 
     # objective coefficient
-    c = append!(deepcopy(standard.c), zeros(nineq))
+    c = append!(deepcopy(Array(standard.c)), zeros(nineq))
     @assert length(c) == ncols
 
     # column bounds
-    xl = append!(deepcopy(standard.xl), zeros(nineq))
-    xu = append!(deepcopy(standard.xu), ones(nineq)*Inf)
+    xl = append!(deepcopy(Array(standard.xl)), zeros(nineq))
+    xu = append!(deepcopy(Array(standard.xu)), ones(nineq)*Inf)
     @assert length(xl) == ncols
     @assert length(xu) == ncols
-    for i in ineq
-        if standard.bl[i] > -INF
-            xu[standard.ncols + i] = standard.bu[i] - standard.bl[i]
+    for i = 1:nineq
+        if standard.bl[ineq[i]] > -INF
+            xu[standard.ncols + i] = standard.bu[ineq[i]] - standard.bl[ineq[i]]
         end
     end
 
     # row bounds
-    b = deepcopy(standard.bl)
+    b = deepcopy(Array(standard.bl))
 
     # create the submatrix for slack
     I = Int64[]; J = Int64[]; V = Float64[]; j = 1;
@@ -85,13 +124,15 @@ function canonical_form(standard::LpData)
             j += 1
         end
     end
-    S = sparse(I, J, V)
+    S = sparse(I, J, V, standard.nrows, nineq)
 
     # create the matrix in canonical form
-    A = [standard.A S]
+    @assert size(standard.A,1) == size(S,1)
+    A = [sparse(Matrix(standard.A)) S]
 
     # create a canonical form data
-    canonical = LpData(c, xl, xu, A, b, b)
+    @show standard.TArray
+    canonical = LpData(c, xl, xu, A, b, b, standard.TArray)
     canonical.is_canonical = true
 
     return canonical
@@ -107,104 +148,36 @@ function phase_one_form(lp::LpData)
     c = append!(zeros(lp.ncols), ones(nrows))
 
     # column bounds
-    xl = append!(deepcopy(lp.xl), zeros(nrows))
-    xu = append!(deepcopy(lp.xu), ones(nrows)*Inf)
+    xl = append!(deepcopy(Array(lp.xl)), zeros(nrows))
+    xu = append!(deepcopy(Array(lp.xu)), ones(nrows)*Inf)
+
+    for j = 1:lp.ncols
+        if lp.xl[j] > -Inf
+            lp.x[j] = lp.xl[j]
+        elseif lp.xu[j] < Inf
+            lp.x[j] = lp.xu[j]
+        else
+            @error("Invalid column bounds")
+        end
+    end
 
     # rhs
-    b = deepcopy(lp.bl)
+    b = lp.bl .- lp.A * lp.x
 
     # create the submatrix for slack
-    I = Int64[]; V = Float64[];
-    VV = Float64[];
+    I = collect(1:nrows)
+    V = Array{Float64}(undef, nrows)
     for i = 1:nrows
         if b[i] < 0
-            b[i] *= -1
-            push!(VV, -1.0);
+            V[i] = -1
         else
-            push!(VV, 1.0);
+            V[i] = 1
         end
-        push!(I, i); push!(V, 1.0);
     end
     S = sparse(I, I, V)
-    P = sparse(I, I, VV)
 
     # create the matrix in canonical form
-    A = [P*lp.A S]
+    A = [sparse(Matrix(lp.A)) S]
 
-    return LpData(c, xl, xu, A, b, b)
-end
-
-"""
-Scaling algorithm from Implementation of the Simplex Method, Ping-Qi Pan (2014)
-"""
-function scaling(lp::LpData)
-    @assert lp.is_canonical == true
-    
-    maxrounds = 50
-    round = 1
-    while round <= maxrounds
-        aratio = matrix_coefficient_ratio(lp.A)
-        # @show aratio
-        rd = zeros(lp.nrows)
-        for i = 1:lp.nrows
-            mina = Inf; maxa = -Inf
-            for j = 1:lp.ncols
-                v = abs(lp.A[i,j])
-                if v > 0
-                    mina = mina > v ? v : mina
-                    maxa = maxa < v ? v : maxa
-                end
-            end
-            rd[i] = sqrt(mina*maxa)
-        end
-        # @show maximum(rd), minimum(rd)
-        lp.A = lp.A ./ rd
-        lp.bl = lp.bl ./ rd[:,1]
-        println("Sacling rows: max|aij| $(maximum(rd)) min|aij| $(minimum(rd))")
-
-        cd = zeros(lp.ncols)
-        vals = nonzeros(lp.A)
-        for j = 1:lp.ncols
-            mina = Inf; maxa = -Inf
-            for i in nzrange(lp.A, j)
-                v = abs(vals[i])
-                if v > 0
-                    mina = mina > v ? v : mina
-                    maxa = maxa < v ? v : maxa
-                end
-            end
-            cd[j] = sqrt(mina*maxa)
-        end
-        # @show maximum(cd), minimum(cd)
-        lp.A = lp.A ./ cd'
-        lp.c = lp.c ./ cd
-        lp.xl = lp.xl .* cd
-        lp.xu = lp.xu .* cd
-        sratio = matrix_coefficient_ratio(lp.A)
-        println("Sacling columns: max|aij| $(maximum(cd)) min|aij| $(minimum(cd))")
-        # @show sratio, aratio
-        if sratio >= 0.9 * aratio
-            break
-        end
-        round += 1
-    end
-    lp.bu = deepcopy(lp.bl)
-end
-
-function matrix_coefficient_ratio(A::SparseMatrixCSC)::Float64
-    ratio = -Inf
-    m, n = size(A)
-    vals = nonzeros(A)
-    for j = 1:n
-        mina = Inf; maxa = -Inf
-        for i in nzrange(A, j)
-            v = abs(vals[i])
-            if v > 0
-                mina = mina > v ? v : mina
-                maxa = maxa < v ? v : maxa
-            end
-        end
-        ratio = ratio > maxa / mina ? ratio : maxa / mina
-    end
-    return ratio
+    return LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), Array(lp.x), lp.TArray)
 end

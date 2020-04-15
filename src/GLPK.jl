@@ -28,16 +28,11 @@ function GLPK_read_mps(mpsfile::String)
 
     # Numbers of rows and columns
     nrow::Int = GLPK.get_num_rows(lp)
-    # nrow = nrow - 1 # glpk puts the objective row in the constraint matrix, dunno why... 
     ncol::Int = GLPK.get_num_cols(lp)
+    nnz::Int = GLPK.get_num_nz(lp);
     
     index1 = Array{Int32,1}(undef, nrow)
     coef1 = Array{Float64,1}(undef, nrow)
-    
-    starts = Vector{Int64}(undef, ncol+1)
-    idx = Array{Int64,1}(undef, 0)
-    elt = Vector{Float64}(undef, 0)
-    nnz = 0
 
     c = Vector{Float64}(undef, ncol)
     xlb = Vector{Float64}(undef, ncol)
@@ -85,29 +80,29 @@ function GLPK_read_mps(mpsfile::String)
         end
     end
 
-    # @show objrow, nrow, ncol
-    sel = Vector{Bool}(undef, nrow)
-    for i in 1:ncol
-        starts[i] = nnz+1
-        nnz1 = GLPK.get_mat_col(lp, i, index1, coef1)
-        fill!(sel, false)
-        for k in 1:nnz1
-            if (index1[k] != objrow)
-                sel[k] = true
+    Arows = Int[]
+    Acols = Int[]
+    Avals = Float64[]
+    sizehint!(Arows, nnz)
+    sizehint!(Acols, nnz)
+    sizehint!(Avals, nnz)
+    for j in 1:ncol
+        nnz1 = GLPK.get_mat_col(lp, j, index1, coef1)
+        for k = 1:nnz1
+            if index1[k] == objrow
+                continue
             end
-            if (objrow > 0 && index1[k] > objrow)
-                index1[k] -= 1
+            if objrow > 0 && index1[k] > objrow
+                push!(Arows, index1[k]-1)
+            else
+                push!(Arows, index1[k])
             end
+            push!(Acols, j)
+            push!(Avals, coef1[k])
         end
-        # @show index1[sel]
-        nnz1 = sum(sel)
-        idx = [idx; index1[sel]]
-        elt = [elt; coef1[sel]]
-        nnz += nnz1
     end
-    starts[ncol+1] = nnz+1
 
-    A = SparseMatrixCSC(nrow, ncol, starts, idx, elt)
+    A = sparse(Arows, Acols, Avals, nrow, ncol)
 
     return c, xlb, xub, l, u, A
 end

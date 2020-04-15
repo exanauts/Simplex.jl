@@ -12,7 +12,7 @@ end
 function summary(lp::LpData)
     println("Number of rows   : $(lp.nrows)")
     println("Number of columns: $(lp.ncols)")
-    println("A: Min $(minimum(nonzeros(lp.A))), Max $(maximum(nonzeros(lp.A)))")
+    # println("A: Min $(minimum(nonzeros(lp.A))), Max $(maximum(nonzeros(lp.A)))")
     println("bl: Min $(minimum(lp.bl)), Max $(maximum(lp.bl))")
     println("bu: Min $(minimum(lp.bu)), Max $(maximum(lp.bu))")
     println("xl: Min $(minimum(lp.xl)), Max $(maximum(lp.xl))")
