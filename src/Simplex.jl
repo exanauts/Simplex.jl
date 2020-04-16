@@ -267,40 +267,41 @@ function pivot(spx::SpxData)
         # @show spx.basis_status[spx.enter], spx.x[spx.enter], spx.lpdata.xl[spx.enter], spx.lpdata.xu[spx.enter]
         # @show minimum(spx.d), maximum(spx.d)
         if spx.basis_status[spx.enter] == BASIS_AT_LOWER
+            best_t = Inf
             for i = 1:spx.lpdata.nrows
-                if abs(spx.d[i]) < EPS
-                    spx.tu[i] = Inf
-                elseif spx.d[i] > 0
-                    spx.tu[i] = spx.tl[i]
+                if spx.d[i] < -EPS && best_t > spx.tu[i]
+                    best_t = spx.tu[i]
+                    spx.leave = i
                 end
-                # if spx.pivot_rule == PIVOT_ARTIFICIAL && spx.basic[i] < spx.start_artvars
-                #     spx.tu[i] = Inf
-                # end
+                if spx.d[i] > +EPS && best_t > spx.tl[i]
+                    best_t = spx.tl[i]
+                    spx.leave = i
+                end
             end
-            spx.leave = argmin(spx.tu)
-            best_t = spx.tu[spx.leave]
-            if best_t < Inf && best_t > spx.lpdata.xu[spx.enter] - spx.x[spx.enter]
+            if best_t > spx.lpdata.xu[spx.enter] - spx.x[spx.enter] && best_t < Inf
                 best_t = spx.lpdata.xu[spx.enter] - spx.lpdata.xl[spx.enter]
-                spx.x[spx.enter] = spx.lpdata.xu[spx.enter]
+                spx.x[spx.enter] .= spx.lpdata.xu[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_UPPER
                 spx.update = false
             end
         else
+            best_t = -Inf
             for i = 1:spx.lpdata.nrows
-                if abs(spx.d[i]) < EPS
-                    spx.tu[i] = -Inf
-                elseif spx.d[i] < 0
-                    spx.tu[i] = spx.tl[i]
+                if spx.d[i] < -EPS && best_t < spx.tl[i]
+                    best_t = spx.tl[i]
+                    spx.leave = i
+                end
+                if spx.d[i] > +EPS && best_t < spx.tu[i]
+                    best_t = spx.tu[i]
+                    spx.leave = i
                 end
                 # if spx.pivot_rule == PIVOT_ARTIFICIAL && spx.basic[i] < spx.start_artvars
                 #     spx.tu[i] = -Inf
                 # end
             end
-            spx.leave = argmax(spx.tu)
-            best_t = spx.tu[spx.leave]
-            if best_t > -Inf && best_t < spx.lpdata.xl[spx.enter] - spx.x[spx.enter]
+            if best_t < spx.lpdata.xl[spx.enter] - spx.x[spx.enter] && best_t > -Inf
                 best_t = spx.lpdata.xl[spx.enter] - spx.lpdata.xu[spx.enter]
-                spx.x[spx.enter] = spx.lpdata.xl[spx.enter]
+                spx.x[spx.enter] .= spx.lpdata.xl[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_LOWER
                 spx.update = false
             end
