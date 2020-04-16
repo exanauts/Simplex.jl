@@ -67,39 +67,39 @@ Several things can (or should) be done to improve the algorithm or the gpu compu
  ### GPU
  
  ```
-  ──────────────────────────────────────────────────────────────────────────────────────────
-                                                   Time                   Allocations
+ ──────────────────────────────────────────────────────────────────────────────────────────
+                                                   Time                   Allocations      
                                            ──────────────────────   ───────────────────────
-             Tot / % measured:                   161s / 18.3%           5.12GiB / 54.0%
+             Tot / % measured:                   129s / 15.2%           4.33GiB / 46.9%    
 
  Section                           ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────────────────
- run core                               1    26.6s  90.1%   26.6s   2.35GiB  84.9%  2.35GiB
-   Phase 1                              1    15.1s  51.1%   15.1s   1.43GiB  51.7%  1.43GiB
-     One iteration                    228    10.4s  35.1%  45.4ms   1.01GiB  36.6%  4.54MiB
-       ratio test                     227    5.75s  19.5%  25.3ms    530MiB  18.7%  2.34MiB
-       PF                             225    1.85s  6.26%  8.20ms    239MiB  8.46%  1.06MiB
-       compute entering variable      228    964ms  3.27%  4.23ms   60.6MiB  2.14%   272KiB
-         compute reduced cost         228    379ms  1.29%  1.66ms   48.5MiB  1.71%   218KiB
-       compute pB                     228    670ms  2.27%  2.94ms   75.4MiB  2.67%   339KiB
-       compute direction              227    307ms  1.04%  1.35ms   44.9MiB  1.59%   203KiB
-       update basis                   227   16.0ms  0.05%  70.4μs   2.24MiB  0.08%  10.1KiB
-       detect cycly                   227   3.79ms  0.01%  16.7μs    494KiB  0.02%  2.17KiB
-       inverse                          2   3.00ms  0.01%  1.50ms   25.5KiB  0.00%  12.7KiB
-     inverse                            1    1.98s  6.73%   1.98s    153MiB  5.41%   153MiB
-     compute xB                         1    883ms  3.00%   883ms   98.2MiB  3.47%  98.2MiB
-   Phase 2                              1    2.08s  7.05%   2.08s    169MiB  5.98%   169MiB
-     One iteration                     34    2.08s  7.04%  61.0ms    169MiB  5.98%  4.98MiB
-       ratio test                      33    2.00s  6.79%  60.7ms    167MiB  5.89%  5.05MiB
-       compute entering variable       34   45.0ms  0.15%  1.32ms   1.12MiB  0.04%  33.9KiB
-         compute reduced cost          34   4.50ms  0.02%   132μs    393KiB  0.01%  11.6KiB
-       PF                              33   6.06ms  0.02%   184μs    467KiB  0.02%  14.1KiB
-       compute pB                      34   2.33ms  0.01%  68.5μs    228KiB  0.01%  6.72KiB
-       compute direction               33   1.87ms  0.01%  56.6μs    135KiB  0.00%  4.08KiB
-       update basis                    33   1.00ms  0.00%  30.4μs   41.8KiB  0.00%  1.27KiB
-       detect cycly                    33    286μs  0.00%  8.68μs   72.2KiB  0.00%  2.19KiB
-     inverse                            1   1.62ms  0.01%  1.62ms   12.7KiB  0.00%  12.7KiB
-     compute xB                         1    691μs  0.00%   691μs   15.6KiB  0.00%  15.6KiB
- row reduction                          1    2.93s  9.93%   2.93s    429MiB  15.1%   429MiB
- ──────────────────────────────────────────────────────────────────────────────────────────
+ run core                               1    16.8s  85.6%   16.8s   1.61GiB  79.4%  1.61GiB
+   Phase 1                              1    10.2s  52.2%   10.2s   1.02GiB  50.1%  1.02GiB
+     One iteration                    228    6.04s  30.9%  26.5ms    573MiB  27.6%  2.51MiB
+       PF                             225    2.05s  10.4%  9.09ms    238MiB  11.5%  1.06MiB
+       ratio test                     227    1.21s  6.20%  5.35ms   66.6MiB  3.21%   300KiB
+       compute entering variable      228    1.00s  5.12%  4.39ms   60.9MiB  2.93%   273KiB
+         compute reduced cost         228    401ms  2.05%  1.76ms   48.7MiB  2.35%   219KiB
+       compute pB                     228    679ms  3.47%  2.98ms   75.5MiB  3.64%   339KiB
+       compute direction              227    319ms  1.63%  1.40ms   46.1MiB  2.22%   208KiB
+       update basis                   227   28.7ms  0.15%   126μs   2.24MiB  0.11%  10.1KiB
+       inverse                          2   3.03ms  0.02%  1.52ms   25.9KiB  0.00%  13.0KiB
+       detect cycly                   227   2.90ms  0.01%  12.8μs    494KiB  0.02%  2.17KiB
+     inverse                            1    1.57s  8.00%   1.57s    160MiB  7.71%   160MiB
+     compute xB                         1    733ms  3.74%   733ms   97.9MiB  4.72%  97.9MiB
+   Phase 2                              1    206ms  1.05%   206ms   6.03MiB  0.29%  6.03MiB
+     One iteration                     34    204ms  1.04%  6.00ms   6.00MiB  0.29%   181KiB
+       ratio test                      33    145ms  0.74%  4.41ms   3.49MiB  0.17%   108KiB
+       compute entering variable       34   44.1ms  0.23%  1.30ms   1.10MiB  0.05%  33.0KiB
+         compute reduced cost          34   7.48ms  0.04%   220μs    363KiB  0.02%  10.7KiB
+       PF                              33   3.73ms  0.02%   113μs    467KiB  0.02%  14.1KiB
+       compute pB                      34   1.60ms  0.01%  47.2μs    272KiB  0.01%  8.01KiB
+       compute direction               33   1.15ms  0.01%  34.9μs    135KiB  0.01%  4.08KiB
+       update basis                    33    844μs  0.00%  25.6μs   41.8KiB  0.00%  1.27KiB
+       detect cycly                    33    119μs  0.00%  3.62μs   72.2KiB  0.00%  2.19KiB
+     inverse                            1   1.59ms  0.01%  1.59ms   15.8KiB  0.00%  15.8KiB
+     compute xB                         1    224μs  0.00%   224μs   15.6KiB  0.00%  15.6KiB
+ row reduction                          1    2.82s  14.4%   2.82s    429MiB  20.6%   429MiB
+ ────────────────────────────────────────────────────────────────────────────────────────── 
  ```
