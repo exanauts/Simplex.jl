@@ -16,3 +16,7 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
 TimerOutputs = "0.5"
+CuArrays = "2.1"
+CUDAnative = "3.0"
+CUDAdrv = "6.2"
+GLPK = "0.12"
