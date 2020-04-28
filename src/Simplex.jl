@@ -394,12 +394,12 @@ function run(prob::LpData;
             presolve(prob)
         end
 
+        @timeit TO "scaling" begin
+            scaling!(prob)
+        end
+
         # convert the problem into a canonical form
         canonical = Simplex.canonical_form(prob)
-
-        @timeit TO "scaling" begin
-            scaling!(canonical)
-        end
 
         # print out the summary of problem
         # summary(canonical)

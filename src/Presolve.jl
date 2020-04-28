@@ -28,6 +28,7 @@ function remove_empty_rows!(lp::LpData)
     lp.A = lp.A[nonempty,:]
     lp.bl = lp.bl[nonempty]
     lp.bu = lp.bu[nonempty]
+    lp.rd = lp.rd[nonempty]
     lp.nrows = length(nonempty)
   end
 end
@@ -99,6 +100,7 @@ function remove_dependent_rows!(lp::LpData{Array})
     lp.A = sparse(lp.A[deprows,:])
     lp.bl = lp.bl[deprows]
     lp.bu = lp.bu[deprows]
+    lp.rd = lp.rd[deprows]
     lp.nrows -= length(depind)
     println("Presolve reduced $(length(depind)) rows.")
   end
@@ -151,6 +153,7 @@ function remove_dependent_rows!(lp::LpData{CuArray})
     lp.A = lp.A[deprows,:]
     lp.bl = lp.bl[deprows]
     lp.bu = lp.bu[deprows]
+    lp.rd = lp.rd[deprows]
     lp.nrows -= length(depind)
     println("Presolve reduced $(length(depind)) rows.")
   end
@@ -160,8 +163,6 @@ end
 Scaling algorithm from Implementation of the Simplex Method, Ping-Qi Pan (2014)
 """
 function scaling!(lp::LpData)
-    @assert lp.is_canonical == true
-    
     maxrounds = 50
     round = 1
     while round <= maxrounds
@@ -179,7 +180,25 @@ function scaling!(lp::LpData)
         end
         round += 1
     end
-    lp.bu .= lp.bl
+    normalizing_rows!(lp)
+    normalizing_columns!(lp)
+    @show maximum(abs.(lp.A))
+end
+
+function normalizing_rows!(lp::LpData)
+  m, n = size(lp.A)
+  for i = 1:m
+    lp.rd[i] = -Inf
+    for j = 1:n
+      v = abs(lp.A[i,j])
+      if v > 0
+        lp.rd[i] = lp.rd[i] < v ? v : lp.rd[i]
+      end
+    end
+  end
+  lp.A ./= lp.rd
+  lp.bl ./= lp.rd
+  lp.bu ./= lp.rd
 end
 
 function scaling_rows!(lp::LpData)
@@ -195,24 +214,60 @@ function scaling_rows!(lp::LpData)
     end
     lp.rd[i] = sqrt(mina*maxa)
   end
+  @show size(lp.A), length(lp.rd)
   lp.A ./= lp.rd
   lp.bl ./= lp.rd
-  # lp.bl ./= lp.rd[:,1]
+  lp.bu ./= lp.rd
+end
+
+function normalizing_columns!(lp::LpData{Array})
+  m, n = size(lp.A)
+  vals = nonzeros(lp.A)
+  for j = 1:n
+    lp.cd[j] = -Inf
+    for i in nzrange(lp.A, j)
+      v = abs(vals[i])
+      if v > 0
+        lp.cd[j] = lp.cd[j] < v ? v : lp.cd[j]
+      end
+    end
+  end
+  lp.A ./= lp.cd'
+  lp.c ./= lp.cd
+  lp.xl .*= lp.cd
+  lp.xu .*= lp.cd
+end
+
+function normalizing_columns!(lp::LpData{CuArray})
+  m, n = size(lp.A)
+  for j = 1:n
+    lp.cd[j] = -Inf
+    for i in 1:m
+      v = abs(lp.A[i,j])
+      if v > 0
+        lp.cd[j] = lp.cd[j] < v ? v : lp.cd[j]
+      end
+    end
+  end
+  lp.A ./= lp.cd'
+  lp.c ./= lp.cd
+  lp.xl .*= lp.cd
+  lp.xu .*= lp.cd
 end
 
 function scaling_columns!(lp::LpData{Array})
   m, n = size(lp.A)
   vals = nonzeros(lp.A)
   for j = 1:n
-      mina = Inf; maxa = -Inf
-      for i in nzrange(lp.A, j)
-          v = abs(vals[i])
-          if v > 0
-              mina = mina > v ? v : mina
-              maxa = maxa < v ? v : maxa
-          end
+    mina = Inf; maxa = -Inf
+    for i in nzrange(lp.A, j)
+      v = abs(vals[i])
+      if v > 0
+        mina = mina > v ? v : mina
+        maxa = maxa < v ? v : maxa
       end
-      lp.cd[j] = sqrt(mina*maxa)
+    end
+    lp.cd[j] = sqrt(mina*maxa)
   end
   lp.A ./= lp.cd'
   lp.c ./= lp.cd
@@ -223,15 +278,15 @@ end
 function scaling_columns!(lp::LpData{CuArray})
   m, n = size(lp.A)
   for j = 1:n
-      mina = Inf; maxa = -Inf
-      for i in 1:m
-          v = abs(lp.A[i,j])
-          if v > 0
-              mina = mina > v ? v : mina
-              maxa = maxa < v ? v : maxa
-          end
+    mina = Inf; maxa = -Inf
+    for i in 1:m
+      v = abs(lp.A[i,j])
+      if v > 0
+        mina = mina > v ? v : mina
+        maxa = maxa < v ? v : maxa
       end
-      lp.cd[j] = sqrt(mina*maxa)
+    end
+    lp.cd[j] = sqrt(mina*maxa)
   end
   lp.A ./= lp.cd'
   lp.c ./= lp.cd
