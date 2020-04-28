@@ -21,21 +21,7 @@ end
 arg1 = parse(Int,ARGS[1])
 arg2 = parse(Int,ARGS[2])
 
-MyArrays = [Array,CuArray]
+MyArrays = [false,true]
 MyPivots = [Simplex.PIVOT_BLAND, Simplex.PIVOT_STEEPEST, Simplex.PIVOT_DANTZIG]
 
-"""
-Run the folloing lines on CPU
-"""
-lp = Simplex.LpData(c, xl, xu, A, bl, bu, Array)
-
-Simplex.presolve(lp)
-canonical = Simplex.canonical_form(lp)
-Simplex.scaling!(canonical)
-
-"""
-Run the core part on your architecture
-"""
-prob = arg1 == 2 ? Simplex.cpu2gpu(canonical) : canonical
-prob.is_canonical = true
-Simplex.run_core(prob, Int[], MyPivots[arg2])
+Simplex.run(lp, pivot_rule = MyPivots[arg2], gpu = MyArrays[arg1])

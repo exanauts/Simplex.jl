@@ -480,7 +480,8 @@ end
 
 function run(prob::LpData; 
     basis::Vector{Int} = Int[],
-    pivot_rule::Int = PIVOT_STEEPEST)
+    pivot_rule::Int = PIVOT_STEEPEST,
+    gpu = false)
 
     @timeit TO "run" begin
         @timeit TO "presolve" begin
@@ -495,10 +496,16 @@ function run(prob::LpData;
         end
 
         # print out the summary of problem
-        summary(canonical)
+        # summary(canonical)
+
+        # Use GPU?
+        processed_prob = gpu ? Simplex.cpu2gpu(canonical) : canonical
+        processed_prob.is_canonical = true
 
         run_core(canonical, basis, pivot_rule)
     end # run
+    
+    show(TO)
 end
 
 function run_core(prob::LpData,
@@ -556,8 +563,6 @@ function run_core(prob::LpData,
         println("Phase 2 is done: status $(spx.status)")
         println("Final objective value: $(objective(spx))")
     end
-
-    show(TO)
 end
 
 include("Presolve.jl")

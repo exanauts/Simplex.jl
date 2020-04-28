@@ -24,7 +24,7 @@ mutable struct LpData{T<:AbstractArray}
     function LpData(c::Array, xl::Array, xu::Array, 
             A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
             x0::Array = Float64[],
-            TArray = CuArray)
+            TArray = Array)
 
         # Check the array type
         if !in(TArray,[CuArray,Array])
@@ -75,9 +75,9 @@ mutable struct LpData{T<:AbstractArray}
     end
 end
 
-LpData(c::Vector{T}, xl::Vector{T}, xu::Vector{T}, 
-    A::SparseMatrixCSC{T,Int}, bl::Vector{T}, bu::Vector{T},
-    TArray) where T = LpData(c, xl, xu, A, bl, bu, T[], TArray)
+LpData(c::Array, xl::Array, xu::Array, 
+    A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
+    TArray) = LpData(c, xl, xu, A, bl, bu, Float64[], TArray)
 
 cpu2gpu(lp::LpData{Array}) = LpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
 
