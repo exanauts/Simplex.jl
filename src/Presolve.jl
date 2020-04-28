@@ -182,7 +182,6 @@ function scaling!(lp::LpData)
     end
     normalizing_rows!(lp)
     normalizing_columns!(lp)
-    @show maximum(abs.(lp.A))
 end
 
 function normalizing_rows!(lp::LpData)
@@ -214,7 +213,6 @@ function scaling_rows!(lp::LpData)
     end
     lp.rd[i] = sqrt(mina*maxa)
   end
-  @show size(lp.A), length(lp.rd)
   lp.A ./= lp.rd
   lp.bl ./= lp.rd
   lp.bu ./= lp.rd
