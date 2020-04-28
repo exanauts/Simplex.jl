@@ -8,34 +8,10 @@ using CuArrays, CUDAnative
 
 TO = TimerOutput()
 
-const USE_INVB = true
-
-const INF = 1.0e+20
-const EPS = 1e-6
-
-const MAX_ITER = 30000000000
-const MAX_HISTORY = 100
-
-const STAT_NOT_SOLVED = 0
-const STAT_SOLVE = 1
-const STAT_OPTIMAL = 2
-const STAT_UNBOUNDED = 3
-const STAT_INFEASIBLE = 4
-const STAT_FEASIBLE = 5
-const STAT_CYCLE = 6
-
+include("Constant.jl")
 include("GLPK.jl")
 include("LP.jl")
-
-const BASIS_BASIC = 1
-const BASIS_AT_LOWER = 2
-const BASIS_AT_UPPER = 3
-const BASIS_FREE = 4
-
-const PIVOT_BLAND = 0
-const PIVOT_STEEPEST = 1
-const PIVOT_DANTZIG = 2
-const PIVOT_ARTIFICIAL = 999
+include("InitialBasis.jl")
 
 mutable struct SpxData{T<:AbstractArray}
     lpdata::LpData
@@ -138,19 +114,6 @@ mutable struct SpxData{T<:AbstractArray}
 
         return spx
     end
-end
-
-function update_views(spx::SpxData)
-    # spx.view_basic_A = @view spx.lpdata.A[:,spx.basic]
-    # spx.view_nonbasic_A = @view spx.lpdata.A[:,spx.nonbasic]
-    # spx.view_basic_x = @view spx.x[spx.basic]
-    # spx.view_nonbasic_x = @view spx.x[spx.nonbasic]
-    # spx.view_basic_xl = @view spx.lpdata.xl[spx.basic]
-    # spx.view_nonbasic_xl = @view spx.lpdata.xl[spx.nonbasic]
-    # spx.view_basic_xu = @view spx.lpdata.xu[spx.basic]
-    # spx.view_nonbasic_xu = @view spx.lpdata.xu[spx.nonbasic]
-    # spx.view_basic_c = @view spx.lpdata.c[spx.basic]
-    # spx.view_nonbasic_c = @view spx.lpdata.c[spx.nonbasic]
 end
 
 objective(spx::SpxData) = (spx.lpdata.c' * spx.x)
@@ -370,7 +333,6 @@ function update_basis(spx::SpxData)
         # @show spx.basic
     end
 
-    update_views(spx)
     detect_cycle(spx)
 
     if USE_INVB
@@ -420,62 +382,6 @@ function iterate(spx::SpxData)
 
         spx.iter += 1
     end
-end
-
-function phase_one(prob::LpData; 
-    pivot_rule::Int = PIVOT_DANTZIG)::Vector{Int}
-
-    # convert to phase-one form
-    p1lp = phase_one_form(prob)
-
-    # load the problem
-    spx = SpxData(p1lp)
-    spx.pivot_rule = deepcopy(pivot_rule)
-
-    # set basis
-    basic = collect((p1lp.ncols-p1lp.nrows+1):p1lp.ncols)
-    set_basis(spx, basic)
-    update_views(spx)
-
-    # The inverse basis matrix is an identity matrix.
-    inverse(spx)
-        
-    # compute basic solution
-    compute_xB(spx)
-
-    # main iterations
-    while spx.status == STAT_SOLVE && spx.iter < MAX_ITER
-        iterate(spx)
-    end
-
-    # Basis should not contain artificial variables.
-    # if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
-    #     spx.start_artvars = prob.ncols+1
-    #     spx.pivot_rule = PIVOT_ARTIFICIAL
-    #     spx.status = STAT_SOLVE
-    # end
-    # # while in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end]) && spx.iter <= prob.nrows
-    # while spx.status == STAT_SOLVE && spx.iter < prob.nrows
-    #     iterate(spx)
-    #     println("Iteration $(spx.iter): removed artificial variable $(spx.nonbasic[spx.enter_pos]) from basis (entering variable $(spx.enter))")
-    # end
-    # spx.pivot_rule = pivot_rule
-
-    if objective(spx) > 1e-6
-        prob.status = STAT_INFEASIBLE
-        @warn("Infeasible.")
-    else
-        if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
-            @warn("Could not remove artificial variables from basis... :(")
-            prob.status = STAT_INFEASIBLE
-        else
-            prob.status = STAT_FEASIBLE
-            prob.x .= spx.x[1:prob.ncols]
-        end
-    end
-    # @show prob.status
-    # @show prob.x
-    return spx.basis_status[1:prob.ncols]
 end
 
 function run(prob::LpData; 
@@ -532,7 +438,6 @@ function run_core(prob::LpData,
 
             if prob.status == STAT_FEASIBLE
                 set_basis_status(spx, basis_status)
-                update_views(spx)
                 # @show length(spx.basic), length(spx.nonbasic)
                 # @show spx.basis_status
             else
@@ -542,7 +447,6 @@ function run_core(prob::LpData,
         else
             println("Basis information is provided.")
             set_basis(spx, basis)
-            update_views(spx)
         end
 
         @timeit TO "Phase 2" begin
