@@ -15,10 +15,10 @@ for instance = ["sc50a", "sc50b", "sc105", "sc205"]
     netlib = "../netlib/$instance.mps"
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
     m, n = size(A); nnz = length(A.nzval);
-    println(fp, "nrows   : $m")
-    println(fp, "ncols   : $n")
-    println(fp, "nnz     : $nnz")
-    println(fp, "sparsity: $(nnz / (m*n))")
+    println(fp, "- nrows   : $m")
+    println(fp, "- ncols   : $n")
+    println(fp, "- nnz     : $nnz")
+    println(fp, "- sparsity: $(nnz / (m*n))")
     for use_gpu in [false, true]
         if use_gpu 
             println(fp, "\n### GPU\n")
