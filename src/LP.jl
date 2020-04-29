@@ -81,6 +81,27 @@ LpData(c::Array, xl::Array, xu::Array,
 
 cpu2gpu(lp::LpData{Array}) = LpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
 
+"""
+Given the original LP of the form
+    min cx 
+    subject to
+    -Inf <= A1 x <= b1
+      b2 <= A2 x <= Inf
+      bl <= A3 x <= bu
+      b4 <= A4 x <= b4
+      xl <= xu <= xu,
+the canonical form is given by
+    min cx + 0 s1 + 0 s2 + 0 s3
+    subject to
+    A1 x + s1 = b1
+    A2 x - s2 = b2
+    A3 x - s3 = bl
+    A4 x      = b4
+    xl <= x <= xu
+    0 <= s1 <= Inf
+    0 <= s2 <= Inf
+    0 <= s3 <= bu - bl
+"""
 function canonical_form(standard::LpData)::LpData
     # count the number of inequality constraints
     ineq = Int[]
@@ -131,7 +152,7 @@ function canonical_form(standard::LpData)::LpData
     A = [sparse(Matrix(standard.A)) S]
 
     # create a canonical form data
-    @show standard.TArray
+    # @show standard.TArray
     canonical = LpData(c, xl, xu, A, b, b, standard.TArray)
     canonical.is_canonical = true
 

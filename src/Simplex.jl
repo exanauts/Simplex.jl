@@ -11,7 +11,7 @@ TO = TimerOutput()
 include("Constant.jl")
 include("GLPK.jl")
 include("LP.jl")
-include("InitialBasis.jl")
+include("PhaseOne/PhaseOne.jl")
 
 mutable struct SpxData{T<:AbstractArray}
     lpdata::LpData
@@ -117,6 +117,7 @@ mutable struct SpxData{T<:AbstractArray}
 end
 
 objective(spx::SpxData) = (spx.lpdata.c' * spx.x)
+rhs(spx::SpxData) = spx.lpdata.bl
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
@@ -151,11 +152,11 @@ end
 function compute_xB(spx::SpxData)
     @timeit TO "compute xB" begin
         if USE_INVB
-            # spx.view_basic_x .= spx.invB * (spx.lpdata.bl .- spx.view_nonbasic_A * spx.view_nonbasic_x)
-            spx.x[spx.basic] .= spx.invB * (spx.lpdata.bl .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
+            # spx.view_basic_x .= spx.invB * (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
+            spx.x[spx.basic] .= spx.invB * (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         else
-            # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (spx.lpdata.bl .- spx.view_nonbasic_A * spx.view_nonbasic_x)
-            spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (spx.lpdata.bl .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
+            # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
+            spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         end
     end
 end
@@ -387,6 +388,7 @@ end
 function run(prob::LpData; 
     basis::Vector{Int} = Int[],
     pivot_rule::Int = PIVOT_STEEPEST,
+    phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
     gpu = false)
 
     @timeit TO "run" begin
@@ -408,64 +410,60 @@ function run(prob::LpData;
         processed_prob = gpu ? Simplex.cpu2gpu(canonical) : canonical
         processed_prob.is_canonical = true
 
-        run_core(canonical, basis, pivot_rule)
+        @timeit TO "run core" begin
+            # load the problem
+            spx = SpxData(processed_prob)
+            spx.pivot_rule = pivot_rule
+            # summary(canonical)
+
+            if length(basis) == 0
+                println("Phase 1:")
+                @timeit TO "Phase 1" begin
+                    basis_status = PhaseOne.run(processed_prob, 
+                        method = phase_one_method,
+                        original_lp = prob,
+                        pivot_rule = pivot_rule)
+                end
+                println("Phase 1 is done: status $(processed_prob.status)")
+
+                if processed_prob.status == STAT_FEASIBLE
+                    set_basis_status(spx, basis_status)
+                    # @show length(spx.basic), length(spx.nonbasic)
+                    # @show spx.basis_status
+                else
+                    show(TO)
+                    return
+                end
+            else
+                println("Basis information is provided.")
+                set_basis(spx, basis)
+            end
+
+            @timeit TO "Phase 2" begin
+                run_core(spx)
+            end
+
+            println("Phase 2 is done: status $(spx.status)")
+            println("Final objective value: $(objective(spx))")
+        end # run core
+
     end # run
     
     show(TO)
 end
 
-function run_core(prob::LpData,
-    basis::Vector{Int} = Int[],
-    pivot_rule::Int = PIVOT_DANTZIG)
-
-    # Check the form
-    if !prob.is_canonical
-        @error("The problem is not in the canonical form.")
+function run_core(spx::SpxData)
+    if USE_INVB
+        inverse(spx)
     end
+    # @show spx.invB
+    
+    compute_xB(spx)
+    # @show spx.x
 
-    @timeit TO "run core" begin
-        # load the problem
-        spx = SpxData(prob)
-        spx.pivot_rule = pivot_rule
-        # summary(canonical)
-
-        if length(basis) == 0
-            println("Phase 1:")
-            @timeit TO "Phase 1" begin
-                basis_status = phase_one(prob, pivot_rule = pivot_rule)
-            end
-            println("Phase 1 is done: status $(prob.status)")
-
-            if prob.status == STAT_FEASIBLE
-                set_basis_status(spx, basis_status)
-                # @show length(spx.basic), length(spx.nonbasic)
-                # @show spx.basis_status
-            else
-                show(TO)
-                return
-            end
-        else
-            println("Basis information is provided.")
-            set_basis(spx, basis)
-        end
-
-        @timeit TO "Phase 2" begin
-            if USE_INVB
-                inverse(spx)
-            end
-            # @show spx.invB
-            
-            compute_xB(spx)
-            # @show spx.x
-
-            # main iterations
-            while spx.status == STAT_SOLVE && spx.iter < MAX_ITER
-                iterate(spx)
-            end
-        end
-
-        println("Phase 2 is done: status $(spx.status)")
-        println("Final objective value: $(objective(spx))")
+    # main iterations
+    while spx.status == STAT_SOLVE && spx.iter < MAX_ITER
+        iterate(spx)
     end
 end
 

@@ -1,12 +1,42 @@
-"""
-Phase 1 procedues to construct the initial basis.
-"""
+module Artificial
+
+using CuArrays
+using SparseArrays
+
+import ..PhaseOne
+import Simplex
 
 """
     This creates a reformulation to begin with all artificial basis.
     This is the simplest way to constrcut the initial basis.
+
+    The canonical form
+
+    minimize c x
+    subject to 
+        A x == b
+        xl <= x <= xu
+
+    is reformulated to
+
+    minimize a1
+    subject to
+        A1 x - a1 == b - A1 xN
+        A1 x + a2 == b - A1 xN
+        xl <= x <= xu
+        0 <= a1 <= Inf
+        0 <= a2 <= Inf,
+
+    where 
+        if xl[j] > -Inf
+            xN[j] = xl[j]
+        elseif xu[j] < Inf
+            xN[j] = xu[j]
+        else
+            xN[j] = 0.0
+        end
 """
-function all_artificial_basis(lp::LpData)
+function reformulate(lp::Simplex.LpData)
     @assert lp.is_canonical == true
 
     nrows = lp.nrows
@@ -19,18 +49,33 @@ function all_artificial_basis(lp::LpData)
     xl = append!(deepcopy(Array(lp.xl)), zeros(nrows))
     xu = append!(deepcopy(Array(lp.xu)), ones(nrows)*Inf)
 
+    # cpu memory
+    if lp.TArray == Array
+        x = lp.x
+    elseif lp.TArray == CuArray
+        x = Array{Float64}(undef, lp.ncols)
+    end
+
     for j = 1:lp.ncols
-        if lp.xl[j] > -Inf
-            lp.x[j] = lp.xl[j]
-        elseif lp.xu[j] < Inf
-            lp.x[j] = lp.xu[j]
+        if xl[j] > -Inf
+            x[j] = xl[j]
+        elseif xu[j] < Inf
+            x[j] = xu[j]
         else
-            @error("Invalid column bounds")
+            x[j] = 0.0
         end
     end
 
+    # copy
+    if lp.TArray == Array
+        lp.x = x
+    elseif lp.TArray == CuArray
+        copyto!(lp.x, x)
+    end
+
     # rhs
-    b = lp.bl .- lp.A * lp.x
+    b = Array{Float64}(undef, lp.nrows)
+    copyto!(b, lp.bl .- lp.A * lp.x)
 
     # create the submatrix for slack
     I = collect(1:nrows)
@@ -47,37 +92,29 @@ function all_artificial_basis(lp::LpData)
     # create the matrix in canonical form
     A = [sparse(Matrix(lp.A)) S]
 
-    return LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), Array(lp.x), lp.TArray)
+    return Simplex.LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), Array(lp.x), lp.TArray)
 end
 
-function cplex_basis(lp::LpData)
-    @assert lp.is_canonical == true
-end
+function run(prob::Simplex.LpData; kwargs...)::Vector{Int}
 
-function phase_one(prob::LpData; 
-    pivot_rule::Int = PIVOT_DANTZIG)::Vector{Int}
+    if !haskey(kwargs, :pivot_rule)
+        @error "Argument :pivot_rule is not provided."
+    end
+    pivot_rule = kwargs[:pivot_rule]
 
     # convert to phase-one form
-    p1lp = all_artificial_basis(prob)
+    p1lp = reformulate(prob)
 
     # load the problem
-    spx = SpxData(p1lp)
+    spx = Simplex.SpxData(p1lp)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
     basic = collect((p1lp.ncols-p1lp.nrows+1):p1lp.ncols)
-    set_basis(spx, basic)
+    Simplex.set_basis(spx, basic)
 
-    # The inverse basis matrix is an identity matrix.
-    inverse(spx)
-        
-    # compute basic solution
-    compute_xB(spx)
-
-    # main iterations
-    while spx.status == STAT_SOLVE && spx.iter < MAX_ITER
-        iterate(spx)
-    end
+    # Run simplex method
+    Simplex.run_core(spx)
 
     # Basis should not contain artificial variables.
     # if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
@@ -92,15 +129,15 @@ function phase_one(prob::LpData;
     # end
     # spx.pivot_rule = pivot_rule
 
-    if objective(spx) > 1e-6
-        prob.status = STAT_INFEASIBLE
+    if Simplex.objective(spx) > 1e-6
+        prob.status = Simplex.STAT_INFEASIBLE
         @warn("Infeasible.")
     else
-        if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
+        if in(Simplex.BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
             @warn("Could not remove artificial variables from basis... :(")
-            prob.status = STAT_INFEASIBLE
+            prob.status = Simplex.STAT_INFEASIBLE
         else
-            prob.status = STAT_FEASIBLE
+            prob.status = Simplex.STAT_FEASIBLE
             prob.x .= spx.x[1:prob.ncols]
         end
     end
@@ -108,3 +145,5 @@ function phase_one(prob::LpData;
     # @show prob.x
     return spx.basis_status[1:prob.ncols]
 end
+
+end # module

@@ -69,7 +69,7 @@ s.t.   x1 + 2 x2 + 2 x3 + x4                + x8                  ==  20
      -1 <= x3 <= 10
       0 <= x6 <= 10
 """
-p1 = Simplex.all_artificial_basis(canonical)
+p1 = Simplex.PhaseOne.Artificial.reformulate(canonical)
 @test p1.nrows == 4
 @test p1.ncols == 11
 I = [1; 2; 3; 4; 1; 2; 3; 4; 1; 2; 3; 1; 2; 3; 4; 1; 2; 3; 4]
