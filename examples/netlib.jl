@@ -1,27 +1,38 @@
 using Simplex
 using CuArrays
+using Dates
 
 """
 To get these mps files, you need to check ../netlib directory.
 """
-# netlib = "../netlib/afiro.mps"
-# netlib = "../netlib/adlittle.mps"
-# netlib = "../netlib/sc50a.mps"
-# netlib = "../netlib/sc50b.mps"
-# netlib = "../netlib/sc105.mps"
-netlib = "../netlib/sc205.mps"
 
-# Simplex.GLPK_solve(netlib)
-c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
-# @show c, xlb, xub, l, u, A
+fp = open("results.md", "w")
+println(fp, "# Numerical Performance ($(now()))\n")
 
-if length(ARGS) < 2
-    @error("Insufficient arguments")
+# for instance = ["afiro", "adlittle", "sc50a", "sc50b", "sc105", "sc205"]
+for instance = ["sc50a", "sc50b", "sc105", "sc205"]
+    println(fp, "## Instance: $instance\n")
+    netlib = "../netlib/$instance.mps"
+    c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
+    m, n = size(A); nnz = length(A.nzval);
+    println(fp, "nrows   : $m")
+    println(fp, "ncols   : $n")
+    println(fp, "nnz     : $nnz")
+    println(fp, "sparsity: $(nnz / (m*n))")
+    for use_gpu in [false, true]
+        if use_gpu 
+            println(fp, "\n### GPU\n")
+        else
+            println(fp, "\n### CPU\n")
+        end
+        println(fp, "```")
+        lp = Simplex.LpData(c, xl, xu, A, bl, bu)
+        Simplex.run(lp, gpu = use_gpu, performance_io = fp)
+        println(fp, "```")
+
+        println("")
+        lp = nothing
+    end
 end
-arg1 = parse(Int,ARGS[1])
-arg2 = parse(Int,ARGS[2])
 
-MyArrays = [false,true]
-MyPivots = [Simplex.PIVOT_BLAND, Simplex.PIVOT_STEEPEST, Simplex.PIVOT_DANTZIG]
-
-Simplex.run(lp, pivot_rule = MyPivots[arg2], gpu = MyArrays[arg1])
+close(fp)

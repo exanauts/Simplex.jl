@@ -387,9 +387,10 @@ end
 
 function run(prob::LpData; 
     basis::Vector{Int} = Int[],
-    pivot_rule::Int = PIVOT_STEEPEST,
+    pivot_rule::Int = PIVOT_DANTZIG,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
-    gpu = false)
+    gpu = false,
+    performance_io::IO = stdout)
 
     @timeit TO "run" begin
         @timeit TO "presolve" begin
@@ -444,12 +445,13 @@ function run(prob::LpData;
             end
 
             println("Phase 2 is done: status $(spx.status)")
-            println("Final objective value: $(objective(spx))")
+            println(performance_io, "Final objective value: $(objective(spx))")
         end # run core
 
     end # run
     
-    show(TO)
+    show(performance_io, TO)
+    println(performance_io, "")
 end
 
 function run_core(spx::SpxData)
