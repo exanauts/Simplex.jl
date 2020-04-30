@@ -119,25 +119,25 @@ function run(prob::Simplex.LpData; kwargs...)::Vector{Int}
     # Basis should not contain artificial variables.
     # if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
     #     spx.start_artvars = prob.ncols+1
-    #     spx.pivot_rule = PIVOT_ARTIFICIAL
-    #     spx.status = STAT_SOLVE
+    #     spx.pivot_rule = Artificial
+    #     spx.status = Solve
     # end
     # # while in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end]) && spx.iter <= prob.nrows
-    # while spx.status == STAT_SOLVE && spx.iter < prob.nrows
+    # while spx.status == Solve && spx.iter < prob.nrows
     #     iterate(spx)
     #     println("Iteration $(spx.iter): removed artificial variable $(spx.nonbasic[spx.enter_pos]) from basis (entering variable $(spx.enter))")
     # end
     # spx.pivot_rule = pivot_rule
 
     if Simplex.objective(spx) > 1e-6
-        prob.status = Simplex.STAT_INFEASIBLE
+        prob.status = Simplex.Infeasible
         @warn("Infeasible.")
     else
         if in(Simplex.BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
             @warn("Could not remove artificial variables from basis... :(")
-            prob.status = Simplex.STAT_INFEASIBLE
+            prob.status = Simplex.Infeasible
         else
-            prob.status = Simplex.STAT_FEASIBLE
+            prob.status = Simplex.Feasible
             prob.x .= spx.x[1:prob.ncols]
         end
     end

@@ -110,7 +110,7 @@ A = sparse(I, J, V)
 @test canonical.is_canonical == true
 
 Simplex.phase_one(canonical)
-@test canonical.status == Simplex.STAT_FEASIBLE
+@test canonical.status == Simplex.Feasible
 @test canonical.A * canonical.x == canonical.bl
 @test (canonical.x .>= canonical.xl) == trues(canonical.ncols)
 @test (canonical.x .<= canonical.xu) == trues(canonical.ncols)
@@ -124,7 +124,7 @@ Simplex.set_basis(spx, canonical.x)
 Simplex.inverse(spx)
 Simplex.compute_xB(spx)
 
-while spx.status == Simplex.STAT_SOLVE
+while spx.status == Simplex.Solve
     Simplex.iterate(spx)
 end
 @test spx.x == [4.; 4.; 4.; 0.; 0.; 10.; 2.;]

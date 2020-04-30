@@ -175,14 +175,14 @@ function run(lp::Simplex.LpData; kwargs...)::Vector{Int}
     Simplex.run_core(spx)
 
     if Simplex.objective(spx) > 1e-6
-        lp.status = Simplex.STAT_INFEASIBLE
+        lp.status = Simplex.Infeasible
         @warn("Infeasible.")
     else
         if in(Simplex.BASIS_BASIC, spx.basis_status[(lp.ncols+1):end])
             @warn("Could not remove artificial variables from basis... :(")
-            lp.status = Simplex.STAT_INFEASIBLE
+            lp.status = Simplex.Infeasible
         else
-            lp.status = Simplex.STAT_FEASIBLE
+            lp.status = Simplex.Feasible
             lp.x .= spx.x[1:lp.ncols]
         end
     end

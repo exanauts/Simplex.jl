@@ -48,12 +48,12 @@ mutable struct SpxData{T<:AbstractArray}
     leave::Int
 
     update::Bool # whether to update basis or not
-    status::Int
+    status::Status
 
     iter::Int
     history::Vector{Vector{Int}}
 
-    pivot_rule::Int
+    pivot_rule::PivotRule
 
     # steepest-edge pivot only
     gamma::T # steepest-edge weights
@@ -106,11 +106,11 @@ mutable struct SpxData{T<:AbstractArray}
         fill!(spx.x, 0)
 
         spx.update = true
-        spx.status = STAT_SOLVE
+        spx.status = Solve
         spx.iter = 1
         spx.history = Vector{Vector{Int}}()
 
-        spx.pivot_rule = PIVOT_DANTZIG
+        spx.pivot_rule = Dantzig
 
         return spx
     end
@@ -193,13 +193,13 @@ end
 
 function compute_entering_variable(spx::SpxData)
     @timeit TO "compute entering variable" begin
-        if spx.pivot_rule == PIVOT_BLAND
+        if spx.pivot_rule == Bland
             pivot_Bland(spx)
-        elseif spx.pivot_rule == PIVOT_STEEPEST
+        elseif spx.pivot_rule == Steepest
             pivot_steepest_edge(spx)
-        elseif spx.pivot_rule == PIVOT_DANTZIG
+        elseif spx.pivot_rule == Dantzig
             pivot_Dantzig(spx)
-        elseif spx.pivot_rule == PIVOT_ARTIFICIAL
+        elseif spx.pivot_rule == Artificial
             pivot_to_remove_artificials(spx)
         else
             @error("Invalid pivot rule.")
@@ -259,7 +259,7 @@ function pivot(spx::SpxData)
                     best_t = spx.tu[i]
                     spx.leave = i
                 end
-                # if spx.pivot_rule == PIVOT_ARTIFICIAL && spx.basic[i] < spx.start_artvars
+                # if spx.pivot_rule == Artificial && spx.basic[i] < spx.start_artvars
                 #     spx.tu[i] = -Inf
                 # end
             end
@@ -303,7 +303,7 @@ function detect_cycle(spx::SpxData)
     @timeit TO "detect cycly" begin
         if in(spx.basic, spx.history)
             println("Cycle is detected.")
-            spx.status = STAT_CYCLE
+            spx.status = Cycle
         end
         if length(spx.history) == MAX_HISTORY
             pop!(spx.history)
@@ -343,7 +343,7 @@ end
 
 function iterate(spx::SpxData)
     @timeit TO "One iteration" begin
-        if spx.iter % 10 == 0 && spx.pivot_rule != PIVOT_ARTIFICIAL
+        if spx.iter % 10 == 0 && spx.pivot_rule != Artificial
             println("Iteration $(spx.iter): objective $(objective(spx))")
         end
 
@@ -355,22 +355,22 @@ function iterate(spx::SpxData)
         compute_entering_variable(spx)
 
         if spx.enter < 0
-            spx.status = STAT_OPTIMAL
+            spx.status = Optimal
             return
         end
 
         pivot(spx)
 
         if spx.leave < 0
-            # spx.status = spx.pivot_rule == PIVOT_ARTIFICIAL ? STAT_FEASIBLE : STAT_UNBOUNDED
-            spx.status = STAT_UNBOUNDED
+            # spx.status = spx.pivot_rule == Artificial ? Feasible : Unbounded
+            spx.status = Unbounded
             return
         end
 
         # println("Update basis? ", spx.update)
 
         if spx.update
-            if spx.pivot_rule == PIVOT_STEEPEST
+            if spx.pivot_rule == Steepest
                 @timeit TO "compute v" begin
                     # compute v before changing basis
                     spx.v .= transpose(spx.invB) * spx.d
@@ -387,7 +387,7 @@ end
 
 function run(prob::LpData; 
     basis::Vector{Int} = Int[],
-    pivot_rule::Int = PIVOT_DANTZIG,
+    pivot_rule::PivotRule = Dantzig,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
     gpu = false,
     performance_io::IO = stdout)
@@ -425,9 +425,9 @@ function run(prob::LpData;
                         original_lp = prob,
                         pivot_rule = pivot_rule)
                 end
-                println("Phase 1 is done: status $(processed_prob.status)")
+                println("Phase 1 is done: status $(Symbol(processed_prob.status))")
 
-                if processed_prob.status == STAT_FEASIBLE
+                if processed_prob.status == Feasible
                     set_basis_status(spx, basis_status)
                     # @show length(spx.basic), length(spx.nonbasic)
                     # @show spx.basis_status
@@ -444,7 +444,8 @@ function run(prob::LpData;
                 run_core(spx)
             end
 
-            println("Phase 2 is done: status $(spx.status)")
+            prob.status = spx.status
+            println("Phase 2 is done: status $(Symbol(spx.status))")
             println(performance_io, "Final objective value: $(objective(spx))")
         end # run core
 
@@ -464,7 +465,7 @@ function run_core(spx::SpxData)
     # @show spx.x
 
     # main iterations
-    while spx.status == STAT_SOLVE && spx.iter < MAX_ITER
+    while spx.status == Solve && spx.iter < MAX_ITER
         iterate(spx)
     end
 end

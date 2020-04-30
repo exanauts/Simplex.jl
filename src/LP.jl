@@ -17,7 +17,7 @@ mutable struct LpData{T<:AbstractArray}
     rd::T # temp for scaling
     cd::T # temp for scaling
 
-    status::Int
+    status::Status
     is_canonical::Bool
     TArray
 
@@ -67,7 +67,7 @@ mutable struct LpData{T<:AbstractArray}
         lp.A = TArray == CuArray ? TArray{Float64,2}(Matrix(A)) : A
         # lp.A = TArray == CuVector ? CuArrays.CUSPARSE.CuSparseMatrixCSC(A) : A
 
-        lp.status = STAT_NOT_SOLVED
+        lp.status = NotSolved
         lp.is_canonical = false
         lp.TArray = TArray
 
