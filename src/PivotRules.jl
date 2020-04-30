@@ -71,29 +71,17 @@ function compute_steepest_edge_weights(spx::SpxData)
     @timeit TO "compute steepest edge weights" begin
         if spx.iter == 1
             for j = 1:length(spx.nonbasic)
-                view_A_j = @view spx.lpdata.A[:,spx.nonbasic[j]]
-                spx.g .= spx.invB * view_A_j
-                # spx.g .= spx.invB * spx.view_nonbasic_A[:,j]
+                spx.g .= spx.invB * spx.lpdata.A[:,spx.nonbasic[j]]
                 spx.gamma[j] = spx.g' * spx.g
             end
         else
             # Here, spx.enter and spx.leave were obtained from the previous iteration.
             @timeit TO "gamma_j" begin
-                view_invB_leave = @view spx.invB[:,spx.leave]
-            #     gamma_e = 1 + spx.d' * spx.d
-            #     Threads.@threads for j = 1:length(spx.nonbasic)
-            #         alpha = view_invB_leave' * spx.view_nonbasic_A[:,j]
-            #         @inbounds spx.gamma[j] += 2 * alpha * spx.view_nonbasic_A[:,j]' * spx.v + alpha^2 * gamma_e
-            #     end
-                spx.gamma .+= 2 .* (spx.view_nonbasic_A' * view_invB_leave) .* (spx.view_nonbasic_A' * spx.v) .+ (spx.view_nonbasic_A' * view_invB_leave).^2 .* (1 + spx.d' * spx.d)
+                spx.gamma .+= 2 .* (spx.lpdata.A[:,spx.nonbasic]' * spx.invB[:,spx.leave]) .* (spx.lpdata.A[:,spx.nonbasic]' * spx.v) .+ (spx.lpdata.A[:,spx.nonbasic]' * spx.invB[:,spx.leave]).^2 .* (1 + spx.d' * spx.d)
             end
 
             @timeit TO "gamm_e" begin
-                view_A_enter = @view spx.lpdata.A[:,spx.nonbasic[spx.enter_pos]]
-                # spx.gamma[spx.enter_pos] = gamma_e / spx.d[spx.leave]^2
-                # g = spx.invB * view_A_enter
-                # spx.gamma[spx.enter_pos] = g' * g
-                spx.g .= spx.invB * view_A_enter
+                spx.g .= spx.invB * spx.lpdata.A[:,spx.nonbasic[spx.enter_pos]]
                 spx.gamma[spx.enter_pos] = spx.g' * spx.g
             end
         end
