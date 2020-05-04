@@ -21,9 +21,11 @@ mutable struct LpData{T<:AbstractArray}
     is_canonical::Bool
     TArray
 
-    function LpData(c::Array, xl::Array, xu::Array, 
-            A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
-            x0::Array = Float64[],
+    row_perm::Array{Int}
+
+    function LpData(c::Vector{Float64}, xl::Vector{Float64}, xu::Vector{Float64}, 
+            A::SparseMatrixCSC{Float64,Int}, bl::Vector{Float64}, bu::Vector{Float64},
+            x0::Vector{Float64} = Float64[],
             TArray = Array)
 
         # Check the array type
@@ -70,16 +72,44 @@ mutable struct LpData{T<:AbstractArray}
         lp.status = NotSolved
         lp.is_canonical = false
         lp.TArray = TArray
+        lp.row_perm = collect(1:lp.nrows)
 
         return lp
     end
 end
 
-LpData(c::Array, xl::Array, xu::Array, 
-    A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
+LpData(c::Vector{Float64}, xl::Vector{Float64}, xu::Vector{Float64}, 
+    A::SparseMatrixCSC{Float64,Int}, bl::Vector{Float64}, bu::Vector{Float64},
     TArray) = LpData(c, xl, xu, A, bl, bu, Float64[], TArray)
 
 cpu2gpu(lp::LpData{Array}) = LpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
+
+"""
+    This function permutes the rows of the linear constraints in the order of <=, >=, and ==.
+    The range constraints are considered as >=.
+"""
+function permute_rows(lp::LpData)
+    m1_idx = Int[]
+    m2_idx = Int[]
+    m3_idx = Int[]
+
+    for i = 1:lp.nrows
+        if lp.bl[i] == lp.bu[i]
+            push!(m3_idx, i)
+        elseif lp.bl[i] > -Inf
+            push!(m2_idx, i)
+        elseif lp.bu[i] < Inf
+            push!(m1_idx, i)
+        end
+    end
+    perm_A = [m1_idx; m2_idx; m3_idx]
+    # @show perm_A
+
+    lp.A = lp.A[perm_A,:]
+    lp.bl .= lp.bl[perm_A]
+    lp.bu .= lp.bu[perm_A]
+    lp.row_perm .= perm_A
+end
 
 """
 Given the original LP of the form

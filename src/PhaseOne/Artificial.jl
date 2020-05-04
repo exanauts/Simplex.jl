@@ -36,63 +36,75 @@ import Simplex
             xN[j] = 0.0
         end
 """
-function reformulate(lp::Simplex.LpData)
+function reformulate(lp::Simplex.LpData; basis::Array{Int,1} = Int[])
     @assert lp.is_canonical == true
 
-    nrows = lp.nrows
-    ncols = lp.ncols + nrows
-
-    # objective coefficient
-    c = append!(zeros(lp.ncols), ones(nrows))
-
-    # column bounds
-    xl = append!(deepcopy(Array(lp.xl)), zeros(nrows))
-    xu = append!(deepcopy(Array(lp.xu)), ones(nrows)*Inf)
-
-    # cpu memory
-    if lp.TArray == Array
-        x = lp.x
-    elseif lp.TArray == CuArray
-        x = Array{Float64}(undef, lp.ncols)
+    artif_idx = Int[]
+    if length(basis) > 0
+        for j in 1:length(basis)
+            if basis[j] > lp.ncols
+                push!(artif_idx, basis[j])
+                basis[j] = lp.ncols + length(artif_idx)
+            end
+        end
+        @show artif_idx
+    else
+        artif_idx = collect(1:lp.nrows) .+ lp.ncols
     end
 
+    nartif = length(artif_idx)
+    nrows = lp.nrows
+    ncols = lp.ncols + nartif
+    
+    # objective coefficient
+    c = append!(zeros(lp.ncols), ones(nartif))
+
+    # column bounds
+    xl = append!(deepcopy(Array(lp.xl)), zeros(nartif))
+    xu = append!(deepcopy(Array(lp.xu)), fill(Inf, nartif))
+
+    # solution x
+    x = Array{Float64}(undef, ncols)
     for j = 1:lp.ncols
-        if xl[j] > -Inf
+        if xl[j] > -Inf && abs(xl[j]) <= abs(xu[j])
             x[j] = xl[j]
-        elseif xu[j] < Inf
+        elseif xu[j] < Inf && abs(xl[j]) > abs(xu[j])
             x[j] = xu[j]
         else
             x[j] = 0.0
         end
     end
-
-    # copy
-    if lp.TArray == Array
-        lp.x = x
-    elseif lp.TArray == CuArray
-        copyto!(lp.x, x)
-    end
+    # for j in basis
+    #     x[j] = 0.0
+    # end
 
     # rhs
     b = Array{Float64}(undef, lp.nrows)
-    copyto!(b, lp.bl .- lp.A * lp.x)
+    copyto!(b, lp.bl .- lp.A * x[1:lp.ncols])
 
     # create the submatrix for slack
-    I = collect(1:nrows)
-    V = Array{Float64}(undef, nrows)
-    for i = 1:nrows
-        if b[i] < 0
+    I = Array{Int64}(undef, nartif)
+    J = collect(1:nartif)
+    V = Array{Float64}(undef, nartif)
+    for i = 1:nartif
+        I[i] = artif_idx[i] - lp.ncols
+        if b[I[i]] < 0
             V[i] = -1
+            x[lp.ncols+i] = -b[I[i]]
         else
             V[i] = 1
+            x[lp.ncols+i] = b[I[i]]
         end
     end
-    S = sparse(I, I, V)
+    S = sparse(I, J, V, nrows, nartif)
 
     # create the matrix in canonical form
     A = [sparse(Matrix(lp.A)) S]
 
-    return Simplex.LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), Array(lp.x), lp.TArray)
+    p1lp = Simplex.LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), x, lp.TArray)
+    p1lp.is_canonical = true
+
+    return p1lp
 end
 
 function run(prob::Simplex.LpData; kwargs...)::Vector{Int}

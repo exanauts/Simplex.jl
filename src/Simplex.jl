@@ -117,7 +117,13 @@ mutable struct SpxData{T<:AbstractArray}
 end
 
 objective(spx::SpxData) = (spx.lpdata.c' * spx.x)
-rhs(spx::SpxData) = spx.lpdata.bl
+
+function rhs(spx::SpxData)
+    if !spx.lpdata.is_canonical
+        @error("LP is not in the canonical form.")
+    end
+    return spx.lpdata.bl
+end
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
@@ -158,6 +164,10 @@ function compute_xB(spx::SpxData)
             # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
             spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         end
+        @show spx.basic
+        @show spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]
+        @assert spx.x[spx.basic] >= spx.lpdata.xl[spx.basic]
+        @assert spx.x[spx.basic] <= spx.lpdata.xu[spx.basic]
     end
 end
 
@@ -214,7 +224,6 @@ function pivot(spx::SpxData)
     
     # compute the direction
     compute_direction(spx)
-    # @show spx.d
     # @show norm(spx.d)
 
     # Terminate with unboundedness
@@ -226,10 +235,6 @@ function pivot(spx::SpxData)
     @timeit TO "ratio test" begin
         spx.tl .= (spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]) ./ spx.d
         spx.tu .= (spx.x[spx.basic] .- spx.lpdata.xu[spx.basic]) ./ spx.d
-        # spx.tl .= (spx.view_basic_x .- spx.view_basic_xl) ./ spx.d
-        # spx.tu .= (spx.view_basic_x .- spx.view_basic_xu) ./ spx.d
-        # @show spx.basis_status[spx.enter], spx.x[spx.enter], spx.lpdata.xl[spx.enter], spx.lpdata.xu[spx.enter]
-        # @show minimum(spx.d), maximum(spx.d)
         if spx.basis_status[spx.enter] == BASIS_AT_LOWER
             best_t = Inf
             for i = 1:spx.lpdata.nrows
@@ -280,11 +285,9 @@ function pivot(spx::SpxData)
         #     return
         # end
         # @assert abs(spx.d[spx.leave]) >= 1e-8
-        # @show best_t, spx.d[spx.leave]
     end
 
     # update solution
-    # @show best_t, spx.d[spx.leave]
     # @show spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]]
     spx.x[spx.basic] .-= best_t * spx.d
     # spx.view_basic_x .-= best_t * spx.d
@@ -293,7 +296,6 @@ function pivot(spx::SpxData)
     @assert spx.x[spx.basic[spx.leave]] <= spx.lpdata.xu[spx.basic[spx.leave]] + 1e-8
     if spx.update
         spx.x[spx.enter] += best_t
-        # @show spx.x[spx.enter], spx.lpdata.xl[spx.enter], spx.lpdata.xu[spx.enter]
         @assert spx.x[spx.enter] >= spx.lpdata.xl[spx.enter] - 1e-8
         @assert spx.x[spx.enter] <= spx.lpdata.xu[spx.enter] + 1e-8
     end
@@ -343,7 +345,7 @@ end
 
 function iterate(spx::SpxData)
     @timeit TO "One iteration" begin
-        if spx.iter % 10 == 0 && spx.pivot_rule != Artificial
+        if spx.iter % PRINT_ITER_FREQ == 0 && spx.pivot_rule != Artificial
             println("Iteration $(spx.iter): objective $(objective(spx))")
         end
 
@@ -393,6 +395,7 @@ function run(prob::LpData;
     performance_io::IO = stdout)
 
     @timeit TO "run" begin
+
         @timeit TO "presolve" begin
             presolve(prob)
         end
@@ -429,6 +432,8 @@ function run(prob::LpData;
 
                 if processed_prob.status == Feasible
                     set_basis_status(spx, basis_status)
+                    @assert length(spx.basic) == spx.lpdata.nrows
+                    @assert length(spx.basic) + length(spx.nonbasic) == spx.lpdata.ncols
                     # @show length(spx.basic), length(spx.nonbasic)
                     # @show spx.basis_status
                 else

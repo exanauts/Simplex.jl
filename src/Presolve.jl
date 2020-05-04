@@ -5,6 +5,7 @@ TODO: Need to check and implement the algorithms in
   Andersen and Andersen. Presolving in linear programming. 1995
 """
 function presolve(lp::LpData)
+  @timeit TO "row permutation" permute_rows(lp)
   @timeit TO "row reduction" begin
     remove_empty_rows!(lp)
     remove_dependent_rows!(lp)
@@ -163,23 +164,23 @@ end
 Scaling algorithm from Implementation of the Simplex Method, Ping-Qi Pan (2014)
 """
 function scaling!(lp::LpData)
-    maxrounds = 50
-    round = 1
-    while round <= maxrounds
-        aratio = matrix_coefficient_ratio(lp.A)
-        # @show aratio
-        scaling_rows!(lp)
-        println("Sacling rows: max|aij| $(maximum(lp.rd)) min|aij| $(minimum(lp.rd))")
+    # maxrounds = 50
+    # round = 1
+    # while round <= maxrounds
+    #     aratio = matrix_coefficient_ratio(lp.A)
+    #     # @show aratio
+    #     scaling_rows!(lp)
+    #     println("Sacling rows: max|aij| $(maximum(lp.rd)) min|aij| $(minimum(lp.rd))")
 
-        scaling_columns!(lp)
-        sratio = matrix_coefficient_ratio(lp.A)
-        println("Sacling columns: max|aij| $(maximum(lp.cd)) min|aij| $(minimum(lp.cd))")
-        # @show sratio, aratio
-        if sratio >= 0.9 * aratio
-            break
-        end
-        round += 1
-    end
+    #     scaling_columns!(lp)
+    #     sratio = matrix_coefficient_ratio(lp.A)
+    #     println("Sacling columns: max|aij| $(maximum(lp.cd)) min|aij| $(minimum(lp.cd))")
+    #     # @show sratio, aratio
+    #     if sratio >= 0.9 * aratio
+    #         break
+    #     end
+    #     round += 1
+    # end
     normalizing_rows!(lp)
     normalizing_columns!(lp)
 end

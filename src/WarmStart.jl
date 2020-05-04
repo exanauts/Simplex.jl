@@ -9,9 +9,11 @@ function set_basis(spx::SpxData, basis::Vector{Int})
     for j = 1:spx.lpdata.ncols
         if !in(j, spx.basic)
             push!(spx.nonbasic, j)
-            if spx.lpdata.xl[j] > -Inf
+            axl = abs(spx.lpdata.xl[j])
+            axu = abs(spx.lpdata.xu[j])
+            if spx.lpdata.xl[j] > -Inf && axl <= axu
                 spx.basis_status[j] = BASIS_AT_LOWER
-            elseif spx.lpdata.xu[j] < Inf
+            elseif spx.lpdata.xu[j] < Inf && axl > axu
                 spx.basis_status[j] = BASIS_AT_UPPER
             else
                 spx.basis_status[j] = BASIS_FREE
