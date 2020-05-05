@@ -19,10 +19,10 @@ import Simplex
 
     is reformulated to
 
-    minimize a1
+    minimize a1 + a2
     subject to
         A1 x - a1 == b - A1 xN
-        A1 x + a2 == b - A1 xN
+        A2 x + a2 == b - A2 xN
         xl <= x <= xu
         0 <= a1 <= Inf
         0 <= a2 <= Inf,

@@ -17,19 +17,73 @@
     xl = [0.; 0.; -1.]; xu = [Inf; Inf; 10.]
     @testset "cplex_basis" begin
         """
-        Permuted LP:
+        Presolved LP:
 
         min  -10 x1 - 12 x2 - 12 x3
-        s.t.       2 x1 +   x2 + 2 x3 <= 20
-            -20 <= - x1 - 2 x2 - 2 x3
-             10 <= 2 x1 + 2 x2 +   x3 <= 20
-            -10 <= - x1 -   x2
+        s.t.          x1 + 0.5 x2 +     x3 <= 10
+                 -0.5 x1 -     x2 -     x3 >= -10
+             5 <=     x1 +     x2 + 0.5 x3 <= 10
             x1, x2 >= 0
             -1 <= x3 <= 10
         """
         lp = Simplex.LpData(c, xl, xu, A, bl, bu)
         Simplex.presolve(lp)
+        Simplex.scaling!(lp)
+        @test lp.A == sparse([1 0.5 1; -0.5 -1 -1; 1 1 0.5])
+        @test lp.bl == [-Inf, -10., 5.]
+        @test lp.bu == [10., Inf, 10.]
+        @test lp.xl == xl
+        @test lp.xu == xu
+        @test lp.c == c
+
         B = Simplex.PhaseOne.Cplex.cplex_basis(lp)
-        @test B = [4,5,6,7]
+        @test B == [4,5,6]
+
+        """
+        canonical:
+            minimize -10 x1 - 12 x2 - 12 x3
+            subject to
+                     x1 + 0.5 x2     + x3 + x4 == 10
+                -0.5 x1     - x2     - x3 - x5 == -10
+                     x1     + x2 + 0.5 x3 - x6 == 5
+                     x1, x2, x4, x5 >= 0
+                     -1 <= x3 <= 10
+                     0 <= x6 <= 5
+        """
+        canonical = Simplex.canonical_form(lp)
+        @test canonical.A == sparse([1.0 0.5 1.0 1.0 0.0 0.0; -0.5 -1.0 -1.0 0.0 -1.0 0.0; 1.0 1.0 0.5 0.0 0.0 -1.0])
+        @test canonical.xl == [0.0, 0.0, -1.0, 0.0, 0.0, 0.0]
+        @test canonical.xu == [Inf, Inf, 10.0, Inf, Inf, 5.0]
+        @test canonical.bl == [10.0, -10.0, 5.0]
+
+        """
+        phase-one:
+            minimize x7 + x8 + x9 + x10 + ... + x14
+            subject to
+                c1:     x1 + 0.5 x2     + x3 + x4           == 10
+                c2:-0.5 x1     - x2     - x3      - x5      == -10
+                c3:     x1     + x2 + 0.5 x3           - x6 == 5
+                c4:     x1                                  + x7 - x15 == 0
+                c5:              x2                         + x8 - x16 == 0
+                c6:                       x3                + x9 - x17 == -1
+                c7:                            x4           + x10 - x18 == 0
+                c8:                                 x5      + x11 - x19 == 0
+                c9:                                      x6 + x12 - x20 == 0
+                c10:                      x3                - x13 + x21 == 10
+                c11:                                     x6 - x14 + x22 == 5
+                        x7..x22 >= 0
+        """
+        p1lp, newB, nartif = Simplex.PhaseOne.Cplex.reformulate(canonical, B)
+        @test p1lp.A == sparse(
+            [1,2,3,4,1,2,3,5,1,2,3,6,10,1,7,2,8,3,9,11,4,5,6,7,8,9,10,11,4,5,6,7,8,9,10,11],
+            [1,1,1,1,2,2,2,2,3,3,3,3,3,4,4,5,5,6,6,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22],
+            Float64[1,-0.5,1,1,0.5,-1,1,1,1,-1,0.5,1,1,1,1,-1,1,-1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,1,1])
+        @test p1lp.bl == Float64[10,-10,5,0,0,-1,0,0,0,10,5]
+        @test p1lp.xl == [fill(-Inf,6); zeros(16)]
+        @test p1lp.xu == fill(Inf,22)
+        @test p1lp.c == [zeros(6); ones(8); zeros(8)]
+        @test newB == collect(4:14)
+        # @test newB == [collect(4:6); collect(15:22)]
+        @test nartif == 0
     end
 end

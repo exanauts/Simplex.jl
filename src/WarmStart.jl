@@ -87,7 +87,7 @@ function set_nonbasic(spx::SpxData)
         elseif spx.basis_status[j] == BASIS_AT_UPPER
             spx.x[j] = spx.lpdata.xu[j]
         elseif spx.basis_status[j] == BASIS_FREE
-            @warn("Free nonbasic variable (x$j) is set to zero.")
+            # @warn("Free nonbasic variable (x$j) is set to zero.")
             spx.x[j] = 0.0
         end
     end

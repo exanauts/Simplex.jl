@@ -8,5 +8,5 @@ using Test
 
 # include("LP.jl")
 # include("PhaseOne/Artificial.jl")
-# include("PhaseOne/Cplex.jl")
+include("PhaseOne/Cplex.jl")
 include("netlib.jl")
