@@ -50,7 +50,7 @@ function pivot_steepest_edge(spx::SpxData)
     spx.s .= (spx.r).^2 ./ spx.gamma
 
     spx.enter = -1
-    max_s = -Inf
+    max_s = 0.0
     for j = 1:length(spx.r)
         if spx.s[j] > max_s
             if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER && sign(spx.r[j]) > 0
@@ -95,7 +95,7 @@ function pivot_Dantzig(spx::SpxData)
     # compute reduced cost
     compute_reduced_cost(spx)
 
-    max_r = -Inf
+    max_r = 0.0
     for j = 1:length(spx.r)
         if abs(spx.r[j]) > max_r
             if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER

@@ -235,7 +235,7 @@ function pivot(spx::SpxData)
     @timeit TO "ratio test" begin
         spx.tl .= (spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]) ./ spx.d
         spx.tu .= (spx.x[spx.basic] .- spx.lpdata.xu[spx.basic]) ./ spx.d
-        if spx.basis_status[spx.enter] == BASIS_AT_LOWER
+        if spx.r[spx.enter_pos] < 0
             best_t = Inf
             for i = 1:spx.lpdata.nrows
                 if spx.d[i] < -EPS && best_t > spx.tu[i]
@@ -253,7 +253,7 @@ function pivot(spx::SpxData)
                 spx.basis_status[spx.enter] = BASIS_AT_UPPER
                 spx.update = false
             end
-        else
+        elseif spx.r[spx.enter_pos] > 0
             best_t = -Inf
             for i = 1:spx.lpdata.nrows
                 if spx.d[i] < -EPS && best_t < spx.tl[i]
@@ -274,7 +274,10 @@ function pivot(spx::SpxData)
                 spx.basis_status[spx.enter] = BASIS_AT_LOWER
                 spx.update = false
             end
+        else
+            @error("The reduced cost is zero.")
         end
+        @assert spx.leave > 0
 
         best_t = abs(best_t*spx.d[spx.leave]) < EPS ? 0.0 : best_t
         # @show abs(best_t*spx.d[spx.leave])
