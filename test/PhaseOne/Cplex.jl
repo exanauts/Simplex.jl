@@ -58,32 +58,47 @@
 
         """
         phase-one:
-            minimize x7 + x8 + x9 + x10 + ... + x14
+            minimize 0
             subject to
                 c1:     x1 + 0.5 x2     + x3 + x4           == 10
                 c2:-0.5 x1     - x2     - x3      - x5      == -10
                 c3:     x1     + x2 + 0.5 x3           - x6 == 5
-                c4:     x1                                  + x7 - x15 == 0
-                c5:              x2                         + x8 - x16 == 0
-                c6:                       x3                + x9 - x17 == -1
-                c7:                            x4           + x10 - x18 == 0
-                c8:                                 x5      + x11 - x19 == 0
-                c9:                                      x6 + x12 - x20 == 0
-                c10:                      x3                - x13 + x21 == 10
-                c11:                                     x6 - x14 + x22 == 5
-                        x7..x22 >= 0
+                x1, x2, x4, x5 >= 0
+                -1 <= x3 <= 10
+                0 <= x6 <= 5
+                
         """
-        p1lp, newB, nartif = Simplex.PhaseOne.Cplex.reformulate(canonical, B)
-        @test p1lp.A == sparse(
-            [1,2,3,4,1,2,3,5,1,2,3,6,10,1,7,2,8,3,9,11,4,5,6,7,8,9,10,11,4,5,6,7,8,9,10,11],
-            [1,1,1,1,2,2,2,2,3,3,3,3,3,4,4,5,5,6,6,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22],
-            Float64[1,-0.5,1,1,0.5,-1,1,1,1,-1,0.5,1,1,1,1,-1,1,-1,1,1,1,1,1,1,1,1,-1,-1,-1,-1,-1,-1,-1,-1,1,1])
-        @test p1lp.bl == Float64[10,-10,5,0,0,-1,0,0,0,10,5]
-        @test p1lp.xl == [fill(-Inf,6); zeros(16)]
-        @test p1lp.xu == fill(Inf,22)
-        @test p1lp.c == [zeros(6); ones(8); zeros(8)]
-        @test newB == collect(4:14)
-        # @test newB == [collect(4:6); collect(15:22)]
-        @test nartif == 0
+        p1lp = Simplex.PhaseOne.Artificial.reformulate(canonical, basis = B)
+        @test p1lp.A == canonical.A
+        @test p1lp.xl == canonical.xl
+        @test p1lp.xu == canonical.xu
+        @test p1lp.bl == canonical.bl
+        @test p1lp.c == zeros(p1lp.ncols)
+
+        is_feasible = Simplex.PhaseOne.Cplex.compute_x(p1lp, B)
+        @test p1lp.x == Float64[0, 0, -1, 11, 11, -5.5]
+        @test is_feasible == false
+
+        """
+        CPLEX basis LP:
+            minimize x7
+            subject to
+                c1:     x1 + 0.5 x2     + x3 + x4           == 10
+                c2:-0.5 x1     - x2     - x3      - x5      == -10
+                c3:     x1     + x2 + 0.5 x3           - x6 == 5
+                c4:                                      x6 + x7 - x8 == 0
+                        x7..x8 >= 0
+        """
+        cpxlp, newB = Simplex.PhaseOne.Cplex.reformulate(p1lp, 6, 0, B)
+        @test cpxlp.A == sparse(
+            [1,2,3,1,2,3,1,2,3,1,2,3,4,4,4],
+            [1,1,1,2,2,2,3,3,3,4,5,6,6,7,8],
+            Float64[1,-0.5,1,0.5,-1,1,1,-1,0.5,1,-1,-1,1,1,-1])
+        @test cpxlp.bl == Float64[10,-10,5,0]
+        @test cpxlp.xl == [fill(-Inf,6); zeros(2)]
+        @test cpxlp.xu == fill(Inf,8)
+        @test cpxlp.c == [zeros(6); 1.; 0.]
+        @test cpxlp.x == Float64[0,0,-1,11,11,-5.5,5.5,0]
+        @test newB == [4,5,6,7]
     end
 end

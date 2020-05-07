@@ -47,7 +47,6 @@ function reformulate(lp::Simplex.LpData; basis::Array{Int,1} = Int[])
                 basis[j] = lp.ncols + length(artif_idx)
             end
         end
-        @show artif_idx
     else
         artif_idx = collect(1:lp.nrows) .+ lp.ncols
     end
@@ -144,14 +143,12 @@ function run(prob::Simplex.LpData; kwargs...)::Vector{Int}
     if Simplex.objective(spx) > 1e-6
         prob.status = Simplex.Infeasible
         @warn("Infeasible.")
+    elseif in(Simplex.BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
+        prob.status = Simplex.Infeasible
+        @warn("Could not remove artificial variables from basis... :(")
     else
-        if in(Simplex.BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
-            @warn("Could not remove artificial variables from basis... :(")
-            prob.status = Simplex.Infeasible
-        else
-            prob.status = Simplex.Feasible
-            prob.x .= spx.x[1:prob.ncols]
-        end
+        prob.status = Simplex.Feasible
+        prob.x .= spx.x[1:prob.ncols]
     end
     # @show prob.status
     # @show prob.x

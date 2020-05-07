@@ -31,6 +31,7 @@ module Cplex
 
 using SparseArrays
 import ..PhaseOne
+import ..Artificial
 import Simplex
 
 function run(lp::Simplex.LpData; kwargs...)::Vector{Int}
@@ -47,9 +48,27 @@ function run(lp::Simplex.LpData; kwargs...)::Vector{Int}
     # get cplex basis
     B = cplex_basis(original_lp)
 
-    # convert to phase-one form
-    p1lp, newB, nartif = reformulate(lp, B)
-    @assert size(p1lp.A,1) == length(newB)
+    # add artificial variables
+    p1lp = Artificial.reformulate(lp, basis = B)
+
+    # compute solution x (maybe infeasible)
+    is_feasible = compute_x(p1lp, B)
+
+    # number of canonical variables and artificial variables
+    num_xvars = lp.ncols
+    num_artif = p1lp.ncols - num_xvars
+    @show num_xvars, num_artif
+
+    # If x is infeasible, we need to solve a piecewise LP.
+    newB = nothing
+    if !is_feasible
+        @warn("CPLEX initial basis solution is infeasible.")
+        # convert to phase-one form
+        p1lp, newB = reformulate(p1lp, num_xvars, num_artif, B)
+        @assert size(p1lp.A,1) == length(newB)
+    else
+        newB = B
+    end
 
     # load the problem
     spx = Simplex.SpxData(p1lp)
@@ -70,32 +89,60 @@ function run(lp::Simplex.LpData; kwargs...)::Vector{Int}
         Simplex.iterate(spx)
     end
 
+    # post iterations so that we can safely truncate the basis
+    # while true
+        # Artificial variables should not be in basis.
+        # sl or sl2 should be in basis.
+        # su or su2 should be in basis.
+    # end
+
+    # basis resulting from phase one
+    basis_status = Vector{Int}(undef, num_xvars)
+
     if Simplex.objective(spx) > 1e-6
         lp.status = Simplex.Infeasible
         @warn("Infeasible.")
+    elseif in(Simplex.BASIS_BASIC, spx.basis_status[collect(1:num_artif) .+ num_xvars])
+        @warn("Could not remove artificial variables from basis... :(")
+        lp.status = Simplex.Infeasible
     else
-        if in(Simplex.BASIS_BASIC, spx.basis_status[collect(1:nartif).+lp.ncols])
-            @warn("Could not remove artificial variables from basis... :(")
-            lp.status = Simplex.Infeasible
-        else
-            lp.status = Simplex.Feasible
-            lp.x .= spx.x[1:lp.ncols]
-            # set the correct basis information
-            @show spx.basis_status[1:lp.ncols]
-            for (j,s) in enumerate(spx.basis_status[1:lp.ncols])
-                if s != Simplex.BASIS_FREE
-                    continue
-                elseif lp.x[j] == lp.xl[j]
-                    spx.basis_status[j] = Simplex.BASIS_AT_LOWER
-                elseif lp.x[j] == lp.xu[j]
-                    spx.basis_status[j] = Simplex.BASIS_AT_UPPER
-                end
+        lp.status = Simplex.Feasible
+        lp.x .= spx.x[1:num_xvars]
+
+        # set the correct basis information
+        num_basics = 0
+        @show spx.basis_status[1:num_xvars]
+        for (j,s) in enumerate(spx.basis_status[1:num_xvars])
+            # s is either basic or free.
+            if s != Simplex.BASIS_FREE
+                basis_status[j] = s
+                num_basics += 1
+            elseif lp.x[j] == lp.xl[j]
+                basis_status[j] = Simplex.BASIS_AT_LOWER
+            elseif lp.x[j] == lp.xu[j]
+                basis_status[j] = Simplex.BASIS_AT_UPPER
             end
-            @show spx.basis_status[1:lp.ncols]
         end
+        # for j in 1:num_xvars
+        #     if basis_status[j] == Simplex.BASIS_BASIC
+        #         if lp.x[j] == lp.xl[j]
+        #             basis_status[j] = Simplex.BASIS_AT_LOWER
+        #             num_basics -= 1
+        #         elseif lp.x[j] == lp.xu[j]
+        #             basis_status[j] = Simplex.BASIS_AT_UPPER
+        #             num_basics -= 1
+        #         end
+        #     end
+        #     if num_basics == lp.nrows
+        #         break
+        #     end
+        # end
+        @show basis_status
+        @show num_basics, lp.nrows
+        @assert num_basics == lp.nrows
     end
     
-    return spx.basis_status[1:lp.ncols]
+    return basis_status
 end
 
 function cplex_basis(lp::Simplex.LpData)::Array{Int64}
@@ -256,88 +303,74 @@ end
         d_i = +1 if b_i - A_i xN > 0,
         d_i = -1 otherwise.
 """
-function reformulate(lp::Simplex.LpData, basis::Array{Int,1})
+function reformulate(lp::Simplex.LpData, num_xvars::Int, num_artif::Int, basis::Vector{Int})
     @assert lp.is_canonical == true
     @assert length(basis) == lp.nrows
 
-    # count artifical variables
-    artif_idx = Int[]
-    for j in 1:length(basis)
-        if basis[j] > lp.ncols
-            push!(artif_idx, basis[j])
-            basis[j] = lp.ncols + length(artif_idx)
-        end
-    end
-    nartif = length(artif_idx)
+    # compute on cpu
+    c = Array(lp.c); xl = Array(lp.xl); xu = Array(lp.xu); x = Array(lp.x)
+    bl = Array(lp.bl);
 
     # count slacks for column bounds
     xl_idx = Int[]
     xu_idx = Int[]
-    for j in 1:lp.ncols
-        if lp.xl[j] > -Inf
+    sizehint!(xl_idx, num_xvars)
+    sizehint!(xu_idx, num_xvars)
+    for j in 1:num_xvars
+        if x[j] < xl[j]
             push!(xl_idx, j)
         end
-        if lp.xu[j] < Inf
+        if x[j] > xu[j]
             push!(xu_idx, j)
         end
     end
     nxl = length(xl_idx)
     nxu = length(xu_idx)
-    nslacks = 2 * (nxl + nxu)
 
-    # nonbasic indices
-    nb_idx = Int[]
-    for j in 1:lp.ncols
-        if !in(j, basis)
-            push!(nb_idx, j)
-        end
-    end
-    
-    naux = nartif + nslacks # number of auxiliary variables
-    nrows = lp.nrows + nxl + nxu # number of rows
-    ncols = lp.ncols + naux # number of columns
-    
-    # objective coefficient
-    c = [zeros(lp.ncols); ones(nartif + nxl + nxu); zeros(nxl + nxu)]
+    # Piecewise function is replaced by a set of linear inequalities.
+    num_auxvars = nxl + nxu # number of variables to replace the piecewise functions
+    num_slacks = nxl + nxu # slacks for the linear inequalities
+    nrows = lp.nrows + num_auxvars # number of rows
+    ncols = lp.ncols + num_auxvars + num_slacks # number of columns
 
-    # column bounds
-    xl = [fill(-Inf, lp.ncols); zeros(naux)]
-    xu = fill(Inf, ncols)
+    # row bounds
+    bl = [bl; xl[xl_idx]; xu[xu_idx]]
 
     # solution x
-    x = zeros(ncols)
-    for j = 1:lp.ncols
-        if lp.xl[j] > -Inf && abs(lp.xl[j]) <= abs(lp.xu[j])
-            x[j] = lp.xl[j]
-        elseif lp.xu[j] < Inf && abs(lp.xl[j]) > abs(lp.xu[j])
-            x[j] = lp.xu[j]
-        end
-    end
-    for j in basis
-        x[j] = 0.0
-    end
+    x = [x; zeros(num_auxvars + num_slacks)]
 
-    # rhs
-    bN = Array{Float64}(undef, lp.nrows)
-    copyto!(bN, lp.bl .- lp.A[:,nb_idx] * x[nb_idx])
-    b = [lp.bl; Array(lp.xl[xl_idx]); Array(lp.xu[xu_idx])]
-
-    # create the submatrix for artificial and slack variables
-    I = Array{Int64}(undef, naux)
-    J = collect(1:naux)
-    V = Array{Float64}(undef, naux)
-    pos = 1
-    for i = 1:nartif
-        I[pos] = artif_idx[i] - lp.ncols
-        if bN[I[i]] < 0
-            V[pos] = -1
-            x[lp.ncols+i] = -bN[I[i]]
+    # basis construction
+    for (i,j) in enumerate(xl_idx)
+        if x[j] < xl[j]
+            push!(basis, lp.ncols + i)
+            x[lp.ncols + i] = xl[j] - x[j]
         else
-            V[pos] = 1
-            x[lp.ncols+i] = bN[I[i]]
+            push!(basis, lp.ncols + num_auxvars + i)
+            x[lp.ncols + num_auxvars + i] = x[j] - xl[j]
         end
-        pos += 1
     end
+    for (i,j) in enumerate(xu_idx)
+        if x[j] > xu[j]
+            push!(basis, lp.ncols + nxl + i)
+            x[lp.ncols + nxl + i] = x[j] - xu[j]
+        else
+            push!(basis, lp.ncols + num_auxvars + nxl + i)
+            x[lp.ncols + num_auxvars + nxl + i] = xu[j] - x[j]
+        end
+    end
+
+    # objective coefficient
+    c = [c; ones(num_auxvars); zeros(num_slacks)]
+
+    # column bounds
+    xl = [fill(-Inf, num_xvars); zeros(num_artif + num_auxvars + num_slacks)]
+    xu = fill(Inf, ncols)
+
+    # create the submatrix for auxiliary and slack variables
+    I = Array{Int64}(undef, num_auxvars + num_slacks)
+    J = collect(1:(num_auxvars + num_slacks))
+    V = Array{Float64}(undef, num_auxvars + num_slacks)
+    pos = 1
     # sl
     for i = 1:nxl
         I[pos] = lp.nrows + i
@@ -362,24 +395,60 @@ function reformulate(lp::Simplex.LpData, basis::Array{Int,1})
         V[pos] = 1
         pos += 1
     end
-    S = sparse(I, J, V, nrows, naux)
+    S = sparse(I, J, V, nrows, num_auxvars + num_slacks)
 
     # create the matrix in canonical form
     A = [[sparse(Matrix(lp.A)); 
         sparse(collect(1:nxl), xl_idx, ones(nxl), nxl, lp.ncols); 
         sparse(collect(1:nxu), xu_idx, ones(nxu), nxu, lp.ncols)] S]
 
-    p1lp = Simplex.LpData(c, xl, xu, A, b, b, x, lp.TArray)
+    p1lp = Simplex.LpData(c, xl, xu, A, bl, bl, x, lp.TArray)
     p1lp.is_canonical = true
 
-    ## Basis should be carefully chosen.
+    return p1lp, sort(basis)
+end
 
-    # additional basis
-    # additional_basis = collect(1:(nxl+nxu)) .+ (lp.ncols + nartif + nxl + nxu)
-    additional_basis = collect(1:(nxl+nxu)) .+ (lp.ncols + nartif)
-    @show additional_basis
+"""
+    compute solution x based on basis information
+    and return whether x is feasible or not
+"""
+function compute_x(lp::Simplex.LpData, basis::Vector{Int})::Bool
+    @assert lp.is_canonical == true
+    @assert lp.nrows == length(basis)
 
-    return p1lp, [basis; additional_basis], nartif
+    nonbasis = Int[]
+    sizehint!(nonbasis, lp.ncols - length(basis))
+
+    # construct nonbasic indices
+    for j in 1:lp.ncols
+        if !in(j, basis)
+            push!(nonbasis, j)
+
+            # set x values
+            axl = abs(lp.xl[j])
+            axu = abs(lp.xu[j])
+            if lp.xl[j] > -Inf && axl <= axu
+                lp.x[j] = lp.xl[j]
+            elseif spx.lpdata.xu[j] < Inf && axl > axu
+                lp.x[j] = lp.xu[j]
+            else
+                lp.x[j] = 0.0
+            end
+        end
+    end
+
+    lp.x[basis] .= lp.A[:,basis] \ (lp.bl .- lp.A[:,nonbasis] * lp.x[nonbasis])
+
+    is_feasible = true
+    for j = 1:lp.ncols
+        if lp.x[j] < lp.xl[j] || lp.x[j] > lp.xu[j]
+            is_feasible = false
+            @show j, lp.x[j], lp.xl[j], lp.xu[j]
+            break
+        end
+    end
+
+    return is_feasible
 end
 
 end
