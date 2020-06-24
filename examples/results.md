@@ -1,4 +1,4 @@
-# Numerical Performance (2020-04-29T16:42:55.607)
+# Numerical Performance (2020-06-24T16:47:09.247)
 
 ## Instance: sc50a
 
@@ -14,39 +14,39 @@ Final objective value: -70.01264227388191
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1596s / 0.57%           3.84GiB / 25.3%    
+       Tot / % measured:            11.9s / 94.4%           0.99GiB / 98.1%    
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        1    9.17s   100%   9.17s   0.97GiB  100%   0.97GiB
-   presolve                 1    4.33s  47.2%   4.33s    535MiB  53.9%   535MiB
-     row reduction          1    4.32s  47.1%   4.32s    535MiB  53.9%   535MiB
-   run core                 1    3.83s  41.7%   3.83s    368MiB  37.0%   368MiB
-     Phase 1                1    3.69s  40.3%   3.69s    353MiB  35.5%   353MiB
-       One iteration       11    791ms  8.62%  71.9ms   88.9MiB  8.95%  8.08MiB
-         PF                10    384ms  4.19%  38.4ms   52.2MiB  5.25%  5.22MiB
-         compute en...     11   96.3ms  1.05%  8.76ms   4.38MiB  0.44%   407KiB
-           compute ...     11   96.2ms  1.05%  8.75ms   4.34MiB  0.44%   404KiB
-         ratio test        10   92.1ms  1.00%  9.21ms   10.0MiB  1.01%  1.00MiB
-         compute di...     10   82.5ms  0.90%  8.25ms   5.38MiB  0.54%   551KiB
-         compute pB        11   12.9ms  0.14%  1.17ms    764KiB  0.08%  69.4KiB
-         update basis      10   10.6ms  0.12%  1.06ms   1.67MiB  0.17%   171KiB
-         detect cycly      10   16.5μs  0.00%  1.65μs   9.02KiB  0.00%     923B
-       inverse              1    735ms  8.01%   735ms   75.1MiB  7.55%  75.1MiB
-       compute xB           1    149ms  1.63%   149ms   23.3MiB  2.34%  23.3MiB
-     Phase 2                1   1.16ms  0.01%  1.16ms    828KiB  0.08%   828KiB
-       One iteration       21   1.00ms  0.01%  47.6μs    640KiB  0.06%  30.5KiB
-         PF                20    317μs  0.00%  15.9μs    390KiB  0.04%  19.5KiB
-         ratio test        20    228μs  0.00%  11.4μs   88.2KiB  0.01%  4.41KiB
-         compute en...     21    137μs  0.00%  6.52μs   68.9KiB  0.01%  3.28KiB
-           compute ...     21   60.1μs  0.00%  2.86μs   42.9KiB  0.00%  2.04KiB
-         compute pB        21   45.4μs  0.00%  2.16μs   22.3KiB  0.00%  1.06KiB
-         compute di...     20   32.6μs  0.00%  1.63μs   15.7KiB  0.00%     802B
-         detect cycly      20   20.4μs  0.00%  1.02μs   18.0KiB  0.00%     923B
-         update basis      20   11.7μs  0.00%   585ns   1.88KiB  0.00%    96.0B
-       inverse              1    132μs  0.00%   132μs    182KiB  0.02%   182KiB
-       compute xB           1   14.2μs  0.00%  14.2μs   3.47KiB  0.00%  3.47KiB
-   scaling                  1    954ms  10.4%   954ms   86.1MiB  8.67%  86.1MiB
+ run                        1    11.3s   100%   11.3s   0.97GiB  100%   0.97GiB
+   presolve                 1    5.65s  50.2%   5.65s    536MiB  53.9%   536MiB
+     row reduction          1    5.64s  50.1%   5.64s    536MiB  53.9%   536MiB
+   run core                 1    4.39s  39.0%   4.39s    368MiB  37.0%   368MiB
+     Phase 1                1    4.23s  37.6%   4.23s    353MiB  35.5%   353MiB
+       One iteration       11    818ms  7.26%  74.4ms   87.7MiB  8.83%  7.98MiB
+         PF                10    384ms  3.41%  38.4ms   52.2MiB  5.25%  5.22MiB
+         compute di...     10    112ms  0.99%  11.2ms   5.15MiB  0.52%   527KiB
+         ratio test        10    106ms  0.94%  10.6ms   9.77MiB  0.98%  0.98MiB
+         compute en...     11   74.8ms  0.66%  6.80ms   4.37MiB  0.44%   407KiB
+           compute ...     11   74.7ms  0.66%  6.79ms   4.34MiB  0.44%   404KiB
+         compute pB        11   13.8ms  0.12%  1.26ms    764KiB  0.08%  69.4KiB
+         update basis      10   12.8ms  0.11%  1.28ms   1.67MiB  0.17%   171KiB
+         detect cycly      10   18.9μs  0.00%  1.89μs   9.02KiB  0.00%     923B
+       inverse              1    738ms  6.55%   738ms   75.1MiB  7.55%  75.1MiB
+       compute xB           1    169ms  1.50%   169ms   23.3MiB  2.34%  23.3MiB
+     Phase 2                1   1.16ms  0.01%  1.16ms    827KiB  0.08%   827KiB
+       One iteration       21    949μs  0.01%  45.2μs    639KiB  0.06%  30.4KiB
+         PF                20    302μs  0.00%  15.1μs    390KiB  0.04%  19.5KiB
+         ratio test        20    221μs  0.00%  11.1μs   88.5KiB  0.01%  4.43KiB
+         compute en...     21    125μs  0.00%  5.97μs   67.9KiB  0.01%  3.23KiB
+           compute ...     21   50.8μs  0.00%  2.42μs   42.9KiB  0.00%  2.04KiB
+         compute pB        21   41.4μs  0.00%  1.97μs   22.3KiB  0.00%  1.06KiB
+         compute di...     20   27.0μs  0.00%  1.35μs   15.7KiB  0.00%     802B
+         detect cycly      20   21.1μs  0.00%  1.05μs   18.0KiB  0.00%     923B
+         update basis      20   11.3μs  0.00%   563ns   1.88KiB  0.00%    96.0B
+       inverse              1    156μs  0.00%   156μs    182KiB  0.02%   182KiB
+       compute xB           1   37.8μs  0.00%  37.8μs   3.47KiB  0.00%  3.47KiB
+   scaling                  1    1.15s  10.2%   1.15s   85.9MiB  8.65%  85.9MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 
@@ -57,39 +57,39 @@ Final objective value: -70.01264227388192
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1616s / 1.82%           5.64GiB / 49.1%    
+       Tot / % measured:            25.3s / 100%            1.66GiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        2    29.4s   100%   14.7s   2.77GiB  100%   1.39GiB
-   run core                 2    23.2s  78.7%   11.6s   2.12GiB  76.6%  1.06GiB
-     Phase 1                2    13.4s  45.4%   6.68s   1.52GiB  54.9%   778MiB
-       One iteration       22    2.91s  9.90%   132ms    388MiB  13.7%  17.6MiB
-         PF                20    1.47s  4.99%  73.4ms    219MiB  7.73%  11.0MiB
-         ratio test        20    345ms  1.17%  17.3ms   42.3MiB  1.49%  2.11MiB
-         compute di...     20    293ms  1.00%  14.7ms   43.1MiB  1.52%  2.16MiB
-         compute en...     22    141ms  0.48%  6.39ms   7.46MiB  0.26%   347KiB
-           compute ...     22    120ms  0.41%  5.47ms   7.17MiB  0.25%   334KiB
-         compute pB        22   93.6ms  0.32%  4.25ms   6.18MiB  0.22%   288KiB
-         update basis      20   10.9ms  0.04%   546μs   1.67MiB  0.06%  85.5KiB
-         detect cycly      20   40.1μs  0.00%  2.01μs   18.0KiB  0.00%     923B
-       inverse              2    2.37s  8.04%   1.18s    245MiB  8.63%   122MiB
-       compute xB           2    665ms  2.26%   333ms   95.5MiB  3.37%  47.8MiB
-     Phase 2                2   52.3ms  0.18%  26.1ms   3.04MiB  0.11%  1.52MiB
-       One iteration       45   51.4ms  0.17%  1.14ms   2.84MiB  0.10%  64.6KiB
-         ratio test        43   27.7ms  0.09%   643μs    920KiB  0.03%  21.4KiB
-         compute en...     45   11.1ms  0.04%   246μs    456KiB  0.02%  10.1KiB
-           compute ...     45   2.61ms  0.01%  58.0μs    242KiB  0.01%  5.38KiB
-         PF                43   3.84ms  0.01%  89.3μs    770KiB  0.03%  17.9KiB
-         compute pB        45   1.57ms  0.01%  34.8μs    303KiB  0.01%  6.74KiB
-         compute di...     43   1.19ms  0.00%  27.8μs    123KiB  0.00%  2.85KiB
-         update basis      43    634μs  0.00%  14.8μs   15.5KiB  0.00%     370B
-         detect cycly      43   67.9μs  0.00%  1.58μs   38.7KiB  0.00%     921B
-       inverse              2    571μs  0.00%   286μs    193KiB  0.01%  96.7KiB
-       compute xB           2    239μs  0.00%   120μs   15.3KiB  0.00%  7.66KiB
-   presolve                 2    4.34s  14.7%   2.17s    539MiB  19.0%   269MiB
-     row reduction          2    4.33s  14.7%   2.16s    538MiB  19.0%   269MiB
-   scaling                  2    956ms  3.25%   478ms   87.4MiB  3.08%  43.7MiB
+ run                        1    25.3s   100%   25.3s   1.66GiB  100%   1.66GiB
+   run core                 1    24.6s  97.3%   24.6s   1.63GiB  97.8%  1.63GiB
+     Phase 1                1    13.6s  53.7%   13.6s   1.04GiB  62.5%  1.04GiB
+       One iteration       11    3.95s  15.6%   359ms    299MiB  17.6%  27.2MiB
+         PF                10    2.08s  8.25%   208ms    167MiB  9.81%  16.7MiB
+         ratio test        10    418ms  1.66%  41.8ms   32.3MiB  1.89%  3.23MiB
+         compute di...     10    356ms  1.41%  35.6ms   37.7MiB  2.22%  3.77MiB
+         compute pB        11    201ms  0.80%  18.3ms   5.44MiB  0.32%   506KiB
+         compute en...     11   52.8ms  0.21%  4.80ms   3.06MiB  0.18%   285KiB
+           compute ...     11   29.7ms  0.12%  2.70ms   2.83MiB  0.17%   264KiB
+         update basis      10    367μs  0.00%  36.7μs   5.94KiB  0.00%     608B
+         detect cycly      10   55.1μs  0.00%  5.51μs   9.02KiB  0.00%     923B
+       inverse              1    2.35s  9.33%   2.35s    170MiB  10.0%   170MiB
+       compute xB           1    876ms  3.47%   876ms   72.3MiB  4.25%  72.3MiB
+     Phase 2                1   64.0ms  0.25%  64.0ms   2.24MiB  0.13%  2.24MiB
+       One iteration       24   63.0ms  0.25%  2.62ms   2.21MiB  0.13%  94.3KiB
+         ratio test        23   34.1ms  0.13%  1.48ms    835KiB  0.05%  36.3KiB
+         compute en...     24   13.7ms  0.05%   569μs    376KiB  0.02%  15.7KiB
+           compute ...     24   3.80ms  0.02%   158μs    199KiB  0.01%  8.30KiB
+         PF                23   4.36ms  0.02%   190μs    381KiB  0.02%  16.6KiB
+         compute pB        24   1.75ms  0.01%  72.8μs    112KiB  0.01%  4.67KiB
+         compute di...     23   1.49ms  0.01%  64.9μs    107KiB  0.01%  4.65KiB
+         update basis      23    807μs  0.00%  35.1μs   13.7KiB  0.00%     608B
+         detect cycly      23   69.7μs  0.00%  3.03μs   20.7KiB  0.00%     920B
+       inverse              1    609μs  0.00%   609μs   11.3KiB  0.00%  11.3KiB
+       compute xB           1    352μs  0.00%   352μs   11.8KiB  0.00%  11.8KiB
+   presolve                 1   4.39ms  0.02%  4.39ms   3.19MiB  0.19%  3.19MiB
+     row reduction          1   4.38ms  0.02%  4.38ms   3.18MiB  0.19%  3.18MiB
+   scaling                  1   1.81ms  0.01%  1.81ms   1.28MiB  0.07%  1.28MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 ## Instance: sc50b
@@ -106,39 +106,39 @@ Final objective value: -69.99999999999997
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1616s / 1.82%           5.65GiB / 49.2%    
+       Tot / % measured:           13.6ms / 100%            6.29MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        3    29.5s   100%   9.82s   2.78GiB  100%    948MiB
-   run core                 3    23.2s  78.7%   7.73s   2.12GiB  76.5%   725MiB
-     Phase 1                3    13.4s  45.3%   4.45s   1.52GiB  54.8%   519MiB
-       One iteration       40    2.92s  9.90%  72.9ms    388MiB  13.7%  9.71MiB
-         PF                37    1.47s  4.99%  39.7ms    220MiB  7.72%  5.93MiB
-         ratio test        37    346ms  1.17%  9.34ms   42.3MiB  1.49%  1.14MiB
-         compute di...     37    293ms  1.00%  7.92ms   43.2MiB  1.52%  1.17MiB
-         compute en...     40    141ms  0.48%  3.52ms   7.59MiB  0.27%   194KiB
-           compute ...     40    120ms  0.41%  3.01ms   7.25MiB  0.25%   185KiB
-         compute pB        40   93.6ms  0.32%  2.34ms   6.20MiB  0.22%   159KiB
-         update basis      37   10.9ms  0.04%   296μs   1.67MiB  0.06%  46.3KiB
-         detect cycly      37   60.8μs  0.00%  1.64μs   33.4KiB  0.00%     925B
-       inverse              3    2.37s  8.03%   789ms    245MiB  8.62%  81.7MiB
-       compute xB           3    665ms  2.26%   222ms   95.5MiB  3.36%  31.8MiB
-     Phase 2                3   53.4ms  0.18%  17.8ms   3.81MiB  0.13%  1.27MiB
-       One iteration       65   52.4ms  0.18%   806μs   3.42MiB  0.12%  53.9KiB
-         ratio test        62   27.9ms  0.09%   449μs   0.98MiB  0.03%  16.2KiB
-         compute en...     65   11.2ms  0.04%   172μs    517KiB  0.02%  7.95KiB
-           compute ...     65   2.66ms  0.01%  40.8μs    279KiB  0.01%  4.30KiB
-         PF                62   4.26ms  0.01%  68.7μs   1.11MiB  0.04%  18.4KiB
-         compute pB        65   1.61ms  0.01%  24.7μs    324KiB  0.01%  4.99KiB
-         compute di...     62   1.22ms  0.00%  19.6μs    137KiB  0.00%  2.21KiB
-         update basis      62    644μs  0.00%  10.4μs   17.3KiB  0.00%     286B
-         detect cycly      62   87.4μs  0.00%  1.41μs   55.8KiB  0.00%     922B
-       inverse              3    730μs  0.00%   243μs    376KiB  0.01%   125KiB
-       compute xB           3    250μs  0.00%  83.2μs   18.6KiB  0.00%  6.21KiB
-   presolve                 3    4.34s  14.7%   1.45s    541MiB  19.0%   180MiB
-     row reduction          3    4.33s  14.7%   1.44s    541MiB  19.0%   180MiB
-   scaling                  3    959ms  3.25%   320ms   89.1MiB  3.13%  29.7MiB
+ run                        1   13.6ms   100%  13.6ms   6.29MiB  100%   6.29MiB
+   presolve                 1   6.25ms  46.0%  6.25ms   2.65MiB  42.2%  2.65MiB
+     row reduction          1   6.24ms  45.9%  6.24ms   2.65MiB  42.2%  2.65MiB
+   scaling                  1   3.95ms  29.1%  3.95ms   1.70MiB  27.0%  1.70MiB
+   run core                 1   3.23ms  23.7%  3.23ms   1.88MiB  30.0%  1.88MiB
+     Phase 1                1   1.91ms  14.1%  1.91ms   1.04MiB  16.6%  1.04MiB
+       One iteration       18   1.08ms  7.93%  59.8μs    614KiB  9.54%  34.1KiB
+         PF                17    312μs  2.30%  18.3μs    331KiB  5.14%  19.5KiB
+         compute en...     18    249μs  1.83%  13.8μs    130KiB  2.02%  7.23KiB
+           compute ...     18   76.3μs  0.56%  4.24μs   75.4KiB  1.17%  4.19KiB
+         ratio test        17    219μs  1.61%  12.9μs   73.4KiB  1.14%  4.32KiB
+         compute pB        18   44.9μs  0.33%  2.49μs   19.1KiB  0.30%  1.06KiB
+         compute di...     17   40.1μs  0.30%  2.36μs   13.1KiB  0.20%     792B
+         detect cycly      17   20.7μs  0.15%  1.22μs   15.4KiB  0.24%     928B
+         update basis      17   12.2μs  0.09%   719ns   1.59KiB  0.02%    96.0B
+       inverse              1    181μs  1.33%   181μs    181KiB  2.82%   181KiB
+       compute xB           1   20.4μs  0.15%  20.4μs   5.13KiB  0.08%  5.13KiB
+     Phase 2                1   1.21ms  8.91%  1.21ms    794KiB  12.3%   794KiB
+       One iteration       20   1.02ms  7.48%  50.8μs    606KiB  9.42%  30.3KiB
+         PF                19    307μs  2.26%  16.2μs    370KiB  5.75%  19.5KiB
+         ratio test        19    264μs  1.95%  13.9μs   86.4KiB  1.34%  4.55KiB
+         compute en...     20    162μs  1.19%  8.11μs   61.2KiB  0.95%  3.06KiB
+           compute ...     20   53.5μs  0.39%  2.68μs   37.1KiB  0.58%  1.85KiB
+         compute pB        20   47.5μs  0.35%  2.37μs   21.3KiB  0.33%  1.06KiB
+         compute di...     19   30.7μs  0.23%  1.62μs   14.6KiB  0.23%     786B
+         detect cycly      19   22.0μs  0.16%  1.16μs   17.2KiB  0.27%     925B
+         update basis      19   10.2μs  0.07%   535ns   1.78KiB  0.03%    96.0B
+       inverse              1    170μs  1.25%   170μs    182KiB  2.83%   182KiB
+       compute xB           1   10.9μs  0.08%  10.9μs   3.31KiB  0.05%  3.31KiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 
@@ -149,39 +149,39 @@ Final objective value: -69.99999999999996
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1617s / 1.83%           5.66GiB / 49.2%    
+       Tot / % measured:            128ms / 100%            8.35MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        4    29.6s   100%   7.39s   2.78GiB  100%    713MiB
-   run core                 4    23.3s  78.7%   5.82s   2.13GiB  76.4%   545MiB
-     Phase 1                4    13.4s  45.4%   3.35s   1.52GiB  54.7%   390MiB
-       One iteration       58    2.96s  10.0%  51.1ms    390MiB  13.7%  6.73MiB
-         PF                54    1.47s  4.98%  27.2ms    220MiB  7.71%  4.07MiB
-         ratio test        54    365ms  1.23%  6.75ms   42.9MiB  1.51%   814KiB
-         compute di...     54    294ms  1.00%  5.45ms   43.3MiB  1.52%   821KiB
-         compute en...     58    160ms  0.54%  2.76ms   8.11MiB  0.28%   143KiB
-           compute ...     58    122ms  0.41%  2.11ms   7.39MiB  0.26%   130KiB
-         compute pB        58   94.8ms  0.32%  1.63ms   6.28MiB  0.22%   111KiB
-         update basis      54   11.4ms  0.04%   211μs   1.68MiB  0.06%  31.9KiB
-         detect cycly      54    103μs  0.00%  1.90μs   48.8KiB  0.00%     926B
-       inverse              4    2.37s  8.01%   592ms    245MiB  8.59%  61.3MiB
-       compute xB           4    665ms  2.25%   166ms   95.6MiB  3.35%  23.9MiB
-     Phase 2                4   96.9ms  0.33%  24.2ms   5.57MiB  0.20%  1.39MiB
-       One iteration       85   95.2ms  0.32%  1.12ms   5.15MiB  0.18%  62.1KiB
-         ratio test        81   51.2ms  0.17%   632μs   1.67MiB  0.06%  21.1KiB
-         compute en...     85   20.1ms  0.07%   237μs    852KiB  0.03%  10.0KiB
-           compute ...     85   4.80ms  0.02%  56.5μs    461KiB  0.02%  5.43KiB
-         PF                81   7.33ms  0.02%  90.5μs   1.42MiB  0.05%  18.0KiB
-         compute pB        85   2.95ms  0.01%  34.8μs    419KiB  0.01%  4.93KiB
-         compute di...     81   2.32ms  0.01%  28.7μs    227KiB  0.01%  2.80KiB
-         update basis      81   1.16ms  0.00%  14.3μs   28.6KiB  0.00%     361B
-         detect cycly      81    131μs  0.00%  1.62μs   73.0KiB  0.00%     923B
-       inverse              4   1.14ms  0.00%   284μs    387KiB  0.01%  96.9KiB
-       compute xB           4    430μs  0.00%   107μs   30.8KiB  0.00%  7.70KiB
-   presolve                 4    4.35s  14.7%   1.09s    544MiB  19.1%   136MiB
-     row reduction          4    4.34s  14.7%   1.08s    544MiB  19.1%   136MiB
-   scaling                  4    961ms  3.25%   240ms   90.8MiB  3.18%  22.7MiB
+ run                        1    128ms   100%   128ms   8.35MiB  100%   8.35MiB
+   run core                 1    120ms  93.6%   120ms   3.91MiB  46.8%  3.91MiB
+     Phase 1                1   63.2ms  49.4%  63.2ms   2.11MiB  25.3%  2.11MiB
+       One iteration       18   59.5ms  46.4%  3.30ms   1.78MiB  21.3%   101KiB
+         ratio test        17   24.6ms  19.2%  1.45ms    597KiB  6.98%  35.1KiB
+         compute en...     18   22.0ms  17.2%  1.22ms    496KiB  5.80%  27.5KiB
+           compute ...     18   2.09ms  1.63%   116μs    144KiB  1.69%  8.01KiB
+         PF                17   4.13ms  3.22%   243μs    283KiB  3.31%  16.7KiB
+         compute pB        18   1.56ms  1.22%  86.5μs    154KiB  1.80%  8.55KiB
+         compute di...     17   1.20ms  0.93%  70.4μs   80.0KiB  0.93%  4.70KiB
+         update basis      17    602μs  0.47%  35.4μs   10.1KiB  0.12%     608B
+         detect cycly      17   61.6μs  0.05%  3.62μs   15.4KiB  0.18%     928B
+       inverse              1    561μs  0.44%   561μs   11.9KiB  0.14%  11.9KiB
+       compute xB           1    264μs  0.21%   264μs   12.0KiB  0.14%  12.0KiB
+     Phase 2                1   55.8ms  43.5%  55.8ms   1.76MiB  21.1%  1.76MiB
+       One iteration       20   55.0ms  42.9%  2.75ms   1.74MiB  20.8%  89.0KiB
+         ratio test        19   30.3ms  23.6%  1.59ms    707KiB  8.27%  37.2KiB
+         compute en...     20   11.4ms  8.89%   569μs    333KiB  3.89%  16.6KiB
+           compute ...     20   2.73ms  2.13%   136μs    182KiB  2.13%  9.10KiB
+         PF                19   3.80ms  2.97%   200μs    316KiB  3.70%  16.7KiB
+         compute pB        20   1.66ms  1.29%  82.8μs   95.0KiB  1.11%  4.75KiB
+         compute di...     19   1.37ms  1.07%  71.9μs   89.4KiB  1.04%  4.70KiB
+         update basis      19    666μs  0.52%  35.1μs   11.3KiB  0.13%     608B
+         detect cycly      19   58.9μs  0.05%  3.10μs   17.2KiB  0.20%     925B
+       inverse              1    527μs  0.41%   527μs   11.9KiB  0.14%  11.9KiB
+       compute xB           1    252μs  0.20%   252μs   12.2KiB  0.14%  12.2KiB
+   presolve                 1   4.83ms  3.77%  4.83ms   2.65MiB  31.7%  2.65MiB
+     row reduction          1   4.82ms  3.76%  4.82ms   2.65MiB  31.7%  2.65MiB
+   scaling                  1   3.03ms  2.37%  3.03ms   1.70MiB  20.3%  1.70MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 ## Instance: sc105
@@ -198,39 +198,39 @@ Final objective value: -53.35247614388573
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1617s / 1.83%           5.68GiB / 49.5%    
+       Tot / % measured:            107ms / 100%            28.2MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        5    29.6s   100%   5.93s   2.81GiB  100%    576MiB
-   run core                 5    23.3s  78.6%   4.66s   2.14GiB  76.0%   438MiB
-     Phase 1                5    13.4s  45.3%   2.68s   1.53GiB  54.3%   313MiB
-       One iteration       79    2.97s  10.0%  37.6ms    393MiB  13.6%  4.97MiB
-         PF                74    1.47s  4.97%  19.9ms    221MiB  7.69%  2.99MiB
-         ratio test        74    365ms  1.23%  4.94ms   43.1MiB  1.50%   596KiB
-         compute di...     74    294ms  0.99%  3.98ms   43.3MiB  1.50%   600KiB
-         compute en...     79    161ms  0.54%  2.03ms   8.43MiB  0.29%   109KiB
-           compute ...     79    123ms  0.41%  1.55ms   7.56MiB  0.26%  98.0KiB
-         compute pB        79   95.4ms  0.32%  1.21ms   6.33MiB  0.22%  82.0KiB
-         update basis      74   11.4ms  0.04%   154μs   1.68MiB  0.06%  23.3KiB
-         detect cycly      74    155μs  0.00%  2.10μs   76.9KiB  0.00%  1.04KiB
-       inverse              5    2.37s  7.99%   473ms    246MiB  8.53%  49.1MiB
-       compute xB           5    665ms  2.25%   133ms   95.6MiB  3.32%  19.1MiB
-     Phase 2                5    107ms  0.36%  21.4ms   11.2MiB  0.39%  2.25MiB
-       One iteration      133    105ms  0.35%   786μs   10.1MiB  0.35%  77.7KiB
-         ratio test       128   52.8ms  0.18%   412μs   2.07MiB  0.07%  16.5KiB
-         compute en...    133   20.9ms  0.07%   157μs   1.11MiB  0.04%  8.55KiB
-           compute ...    133   5.10ms  0.02%  38.4μs    639KiB  0.02%  4.80KiB
-         PF               128   12.2ms  0.04%  95.5μs   5.34MiB  0.19%  42.7KiB
-         compute pB       133   3.98ms  0.01%  30.0μs    518KiB  0.02%  3.90KiB
-         compute di...    128   2.46ms  0.01%  19.2μs    287KiB  0.01%  2.24KiB
-         update basis     128   1.20ms  0.00%  9.34μs   33.0KiB  0.00%     264B
-         detect cycly     128    320μs  0.00%  2.50μs    139KiB  0.00%  1.08KiB
-       inverse              5   1.84ms  0.01%   369μs   1.10MiB  0.04%   225KiB
-       compute xB           5    456μs  0.00%  91.3μs   37.4KiB  0.00%  7.47KiB
-   presolve                 5    4.40s  14.8%   879ms    556MiB  19.3%   111MiB
-     row reduction          5    4.39s  14.8%   878ms    556MiB  19.3%   111MiB
-   scaling                  5    969ms  3.27%   194ms   96.7MiB  3.36%  19.3MiB
+ run                        1    107ms   100%   107ms   28.2MiB  100%   28.2MiB
+   presolve                 1   80.4ms  75.1%  80.4ms   12.1MiB  43.1%  12.1MiB
+     row reduction          1   80.4ms  75.1%  80.4ms   12.1MiB  43.1%  12.1MiB
+   run core                 1   16.7ms  15.6%  16.7ms   10.0MiB  35.5%  10.0MiB
+     Phase 2                1   9.82ms  9.17%  9.82ms   5.67MiB  20.1%  5.67MiB
+       One iteration       48   9.09ms  8.49%   189μs   4.94MiB  17.5%   105KiB
+         PF                47   5.18ms  4.84%   110μs   3.92MiB  13.9%  85.4KiB
+         compute pB        48   1.29ms  1.20%  26.8μs   99.0KiB  0.34%  2.06KiB
+         ratio test        47   1.14ms  1.06%  24.2μs    407KiB  1.41%  8.67KiB
+         compute en...     48    592μs  0.55%  12.3μs    284KiB  0.98%  5.92KiB
+           compute ...     48    252μs  0.24%  5.24μs    178KiB  0.62%  3.70KiB
+         detect cycly      47    203μs  0.19%  4.31μs   65.7KiB  0.23%  1.40KiB
+         compute di...     47    107μs  0.10%  2.28μs   60.5KiB  0.21%  1.29KiB
+         update basis      47   28.6μs  0.03%   608ns   4.41KiB  0.02%    96.0B
+       inverse              1    641μs  0.60%   641μs    739KiB  2.56%   739KiB
+       compute xB           1   53.1μs  0.05%  53.1μs   6.59KiB  0.02%  6.59KiB
+     Phase 1                1   6.60ms  6.17%  6.60ms   4.05MiB  14.4%  4.05MiB
+       One iteration       21   3.93ms  3.67%   187μs   2.29MiB  8.14%   112KiB
+         PF                20   1.80ms  1.68%  89.8μs   1.67MiB  5.92%  85.4KiB
+         compute en...     21    581μs  0.54%  27.7μs    320KiB  1.11%  15.2KiB
+           compute ...     21    158μs  0.15%  7.51μs    180KiB  0.62%  8.56KiB
+         ratio test        20    492μs  0.46%  24.6μs    166KiB  0.57%  8.28KiB
+         compute pB        21    486μs  0.45%  23.1μs   43.3KiB  0.15%  2.06KiB
+         compute di...     20    108μs  0.10%  5.40μs   25.4KiB  0.09%  1.27KiB
+         detect cycly      20   33.2μs  0.03%  1.66μs   28.0KiB  0.10%  1.40KiB
+         update basis      20   16.2μs  0.02%   811ns   1.88KiB  0.01%    96.0B
+       compute xB           1    467μs  0.44%   467μs   10.3KiB  0.04%  10.3KiB
+       inverse              1    454μs  0.42%   454μs    738KiB  2.56%   738KiB
+   scaling                  1   9.73ms  9.08%  9.73ms   5.90MiB  20.9%  5.90MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 
@@ -241,39 +241,39 @@ Final objective value: -53.35247614388565
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1617s / 1.86%           5.71GiB / 49.7%    
+       Tot / % measured:            414ms / 100%            28.3MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        6    30.1s   100%   5.01s   2.84GiB  100%    485MiB
-   run core                 6    23.7s  78.7%   3.94s   2.15GiB  75.6%   367MiB
-     Phase 1                6    13.6s  45.1%   2.26s   1.53GiB  53.9%   261MiB
-       One iteration      100    3.11s  10.3%  31.1ms    395MiB  13.6%  3.95MiB
-         PF                94    1.48s  4.91%  15.7ms    222MiB  7.63%  2.36MiB
-         ratio test        94    423ms  1.41%  4.50ms   44.1MiB  1.52%   481KiB
-         compute di...     94    296ms  0.99%  3.15ms   43.4MiB  1.49%   473KiB
-         compute en...    100    229ms  0.76%  2.29ms   9.58MiB  0.33%  98.1KiB
-           compute ...    100    127ms  0.42%  1.27ms   7.73MiB  0.27%  79.2KiB
-         compute pB       100   97.6ms  0.32%   976μs   6.42MiB  0.22%  65.8KiB
-         update basis      94   12.2ms  0.04%   130μs   1.70MiB  0.06%  18.5KiB
-         detect cycly      94    244μs  0.00%  2.60μs    105KiB  0.00%  1.12KiB
-       inverse              6    2.37s  7.87%   395ms    246MiB  8.45%  41.0MiB
-       compute xB           6    666ms  2.21%   111ms   95.6MiB  3.29%  15.9MiB
-     Phase 2                6    332ms  1.10%  55.3ms   17.2MiB  0.59%  2.87MiB
-       One iteration      182    328ms  1.09%  1.80ms   16.0MiB  0.55%  90.2KiB
-         ratio test       176    192ms  0.64%  1.09ms   4.81MiB  0.17%  28.0KiB
-         compute en...    182   68.5ms  0.23%   376μs   2.21MiB  0.08%  12.4KiB
-           compute ...    182   12.4ms  0.04%  68.1μs   1.01MiB  0.03%  5.70KiB
-         PF               176   23.8ms  0.08%   135μs   6.13MiB  0.21%  35.7KiB
-         compute pB       182   8.51ms  0.03%  46.7μs    753KiB  0.03%  4.14KiB
-         compute di...    176   6.17ms  0.02%  35.1μs    514KiB  0.02%  2.92KiB
-         update basis     176   2.85ms  0.01%  16.2μs   61.5KiB  0.00%     358B
-         detect cycly     176    539μs  0.00%  3.06μs    206KiB  0.01%  1.17KiB
-       inverse              6   3.00ms  0.01%   499μs   1.11MiB  0.04%   190KiB
-       compute xB           6    707μs  0.00%   118μs   49.6KiB  0.00%  8.27KiB
-   presolve                 6    4.45s  14.8%   742ms    568MiB  19.5%  94.7MiB
-     row reduction          6    4.44s  14.8%   740ms    568MiB  19.5%  94.6MiB
-   scaling                  6    987ms  3.28%   165ms    103MiB  3.53%  17.1MiB
+ run                        1    414ms   100%   414ms   28.3MiB  100%   28.3MiB
+   run core                 1    367ms  88.6%   367ms   10.1MiB  35.8%  10.1MiB
+     Phase 2                1    226ms  54.6%   226ms   5.97MiB  21.1%  5.97MiB
+       One iteration       49    224ms  54.2%  4.58ms   5.94MiB  21.0%   124KiB
+         ratio test        48    139ms  33.5%  2.89ms   2.68MiB  9.49%  57.3KiB
+         compute en...     49   46.3ms  11.2%   945μs   1.08MiB  3.82%  22.6KiB
+           compute ...     49   6.77ms  1.64%   138μs    398KiB  1.37%  8.12KiB
+         PF                48   12.5ms  3.02%   261μs    806KiB  2.78%  16.8KiB
+         compute pB        49   4.32ms  1.04%  88.1μs    235KiB  0.81%  4.80KiB
+         compute di...     48   4.15ms  1.00%  86.4μs    296KiB  1.02%  6.16KiB
+         update basis      48   1.70ms  0.41%  35.4μs   28.5KiB  0.10%     608B
+         detect cycly      48    344μs  0.08%  7.16μs   67.1KiB  0.23%  1.40KiB
+       inverse              1   1.32ms  0.32%  1.32ms   11.9KiB  0.04%  11.9KiB
+       compute xB           1    264μs  0.06%   264μs   12.2KiB  0.04%  12.2KiB
+     Phase 1                1    138ms  33.5%   138ms   4.05MiB  14.3%  4.05MiB
+       One iteration       21    130ms  31.3%  6.17ms   2.91MiB  10.3%   142KiB
+         compute en...     21   56.7ms  13.7%  2.70ms   1.08MiB  3.82%  52.8KiB
+           compute ...     21   3.07ms  0.74%   146μs    175KiB  0.60%  8.35KiB
+         ratio test        20   53.3ms  12.9%  2.67ms   1.05MiB  3.71%  53.8KiB
+         PF                20   6.81ms  1.65%   340μs    335KiB  1.16%  16.8KiB
+         compute pB        21   2.40ms  0.58%   115μs    101KiB  0.35%  4.80KiB
+         compute di...     20   1.88ms  0.45%  93.9μs   94.7KiB  0.33%  4.73KiB
+         update basis      20    737μs  0.18%  36.9μs   11.9KiB  0.04%     608B
+         detect cycly      20    133μs  0.03%  6.66μs   28.0KiB  0.10%  1.40KiB
+       inverse              1    988μs  0.24%   988μs   11.9KiB  0.04%  11.9KiB
+       compute xB           1    372μs  0.09%   372μs   13.6KiB  0.05%  13.6KiB
+   presolve                 1   35.4ms  8.56%  35.4ms   12.0MiB  42.4%  12.0MiB
+     row reduction          1   35.4ms  8.56%  35.4ms   12.0MiB  42.3%  12.0MiB
+   scaling                  1   11.0ms  2.67%  11.0ms   5.90MiB  20.8%  5.90MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 ## Instance: sc205
@@ -290,40 +290,40 @@ Final objective value: -52.39487567908582
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1617s / 1.88%           5.85GiB / 50.9%    
+       Tot / % measured:            407ms / 100%             137MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        7    30.5s   100%   4.35s   2.97GiB  100%    435MiB
-   run core                 7    23.8s  78.0%   3.40s   2.22GiB  74.6%   324MiB
-     Phase 1                7    13.6s  44.6%   1.94s   1.55GiB  52.2%   227MiB
-       One iteration      139    3.13s  10.3%  22.5ms    410MiB  13.5%  2.95MiB
-         PF               132    1.49s  4.89%  11.3ms    234MiB  7.68%  1.77MiB
-         ratio test       132    425ms  1.39%  3.22ms   44.7MiB  1.47%   347KiB
-         compute di...    132    297ms  0.97%  2.25ms   43.5MiB  1.43%   337KiB
-         compute en...    139    231ms  0.76%  1.66ms   10.7MiB  0.35%  78.9KiB
-           compute ...    139    128ms  0.42%   918μs   8.33MiB  0.27%  61.4KiB
-         compute pB       139   99.0ms  0.32%   712μs   6.56MiB  0.22%  48.3KiB
-         update basis     132   12.2ms  0.04%  92.6μs   1.70MiB  0.06%  13.2KiB
-         detect cycly     132    432μs  0.00%  3.28μs    188KiB  0.01%  1.42KiB
-       inverse              7    2.37s  7.78%   339ms    248MiB  8.16%  35.5MiB
-       compute xB           7    666ms  2.19%  95.1ms   95.6MiB  3.14%  13.7MiB
-     Phase 2                7    399ms  1.31%  57.1ms   67.6MiB  2.22%  9.66MiB
-       One iteration      310    393ms  1.29%  1.27ms   63.8MiB  2.09%   211KiB
-         ratio test       303    197ms  0.65%   649μs   6.84MiB  0.22%  23.1KiB
-         compute en...    310   71.1ms  0.23%   229μs   3.54MiB  0.12%  11.7KiB
-           compute ...    310   13.3ms  0.04%  42.9μs   1.82MiB  0.06%  6.01KiB
-         PF               302   70.0ms  0.23%   232μs   46.3MiB  1.52%   157KiB
-         compute pB       310   13.1ms  0.04%  42.3μs   1.19MiB  0.04%  3.93KiB
-         compute di...    303   6.66ms  0.02%  22.0μs    777KiB  0.02%  2.56KiB
-         inverse            1   3.70ms  0.01%  3.70ms   2.75MiB  0.09%  2.75MiB
-         update basis     303   2.97ms  0.01%  9.79μs   73.4KiB  0.00%     248B
-         detect cycly     303   1.25ms  0.00%  4.13μs    482KiB  0.02%  1.59KiB
-       inverse              7   5.01ms  0.02%   715μs   3.77MiB  0.12%   551KiB
-       compute xB           7    761μs  0.00%   109μs   61.5KiB  0.00%  8.79KiB
-   presolve                 7    4.69s  15.4%   670ms    610MiB  20.0%  87.2MiB
-     row reduction          7    4.68s  15.4%   669ms    610MiB  20.0%  87.1MiB
-   scaling                  7    1.03s  3.37%   147ms    125MiB  4.12%  17.9MiB
+ run                        1    407ms   100%   407ms    137MiB  100%    137MiB
+   presolve                 1    232ms  57.0%   232ms   42.0MiB  30.6%  42.0MiB
+     row reduction          1    232ms  57.0%   232ms   42.0MiB  30.6%  42.0MiB
+   run core                 1    134ms  33.1%   134ms   72.0MiB  52.5%  72.0MiB
+     Phase 2                1    100ms  24.6%   100ms   50.4MiB  36.7%  50.4MiB
+       One iteration      128   97.8ms  24.1%   764μs   47.7MiB  34.8%   382KiB
+         PF               126   75.3ms  18.5%   597μs   40.1MiB  29.2%   326KiB
+         compute pB       128   6.40ms  1.58%  50.0μs    464KiB  0.33%  3.63KiB
+         ratio test       127   5.81ms  1.43%  45.8μs   2.03MiB  1.48%  16.4KiB
+         inverse            1   3.50ms  0.86%  3.50ms   2.75MiB  2.01%  2.75MiB
+         compute en...    128   3.03ms  0.74%  23.6μs   1.32MiB  0.96%  10.6KiB
+           compute ...    128   1.14ms  0.28%  8.92μs    825KiB  0.59%  6.45KiB
+         detect cycly     127    766μs  0.19%  6.03μs    276KiB  0.20%  2.17KiB
+         compute di...    127    542μs  0.13%  4.27μs    262KiB  0.19%  2.07KiB
+         update basis     127    127μs  0.03%   999ns   11.9KiB  0.01%    96.0B
+       inverse              1   1.82ms  0.45%  1.82ms   2.66MiB  1.93%  2.66MiB
+       compute xB           1    103μs  0.03%   103μs   11.9KiB  0.01%  11.9KiB
+     Phase 1                1   33.9ms  8.33%  33.9ms   20.6MiB  15.0%  20.6MiB
+       One iteration       39   23.7ms  5.84%   608μs   14.2MiB  10.4%   373KiB
+         PF                38   16.0ms  3.93%   420μs   12.1MiB  8.82%   326KiB
+         compute en...     39   2.51ms  0.62%  64.4μs   1.10MiB  0.80%  28.9KiB
+           compute ...     39    640μs  0.16%  16.4μs    614KiB  0.44%  15.7KiB
+         compute pB        39   2.19ms  0.54%  56.2μs    141KiB  0.10%  3.63KiB
+         ratio test        38   1.85ms  0.45%  48.6μs    579KiB  0.41%  15.2KiB
+         detect cycly      38    233μs  0.06%  6.13μs   83.0KiB  0.06%  2.18KiB
+         compute di...     38    172μs  0.04%  4.54μs   77.8KiB  0.06%  2.05KiB
+         update basis      38   42.0μs  0.01%  1.11μs   3.56KiB  0.00%    96.0B
+       inverse              1   1.73ms  0.43%  1.73ms   2.65MiB  1.93%  2.65MiB
+       compute xB           1    250μs  0.06%   250μs   18.7KiB  0.01%  18.7KiB
+   scaling                  1   39.8ms  9.79%  39.8ms   22.8MiB  16.6%  22.8MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
 
@@ -334,39 +334,39 @@ Final objective value: -52.39487567908579
  ──────────────────────────────────────────────────────────────────────────────
                                        Time                   Allocations      
                                ──────────────────────   ───────────────────────
-       Tot / % measured:            1619s / 1.98%           5.94GiB / 51.7%    
+       Tot / % measured:            1.74s / 100%             100MiB / 100%     
 
  Section               ncalls     time   %tot     avg     alloc   %tot      avg
  ──────────────────────────────────────────────────────────────────────────────
- run                        8    32.1s   100%   4.02s   3.07GiB  100%    393MiB
-   run core                 8    25.2s  78.3%   3.15s   2.25GiB  73.3%   288MiB
-     Phase 1                8    14.1s  43.8%   1.76s   1.56GiB  50.9%   200MiB
-       One iteration      178    3.57s  11.1%  20.1ms    419MiB  13.3%  2.35MiB
-         PF               170    1.50s  4.67%  8.83ms    235MiB  7.45%  1.38MiB
-         ratio test       170    613ms  1.91%  3.61ms   48.0MiB  1.52%   289KiB
-         compute en...    178    453ms  1.41%  2.55ms   14.8MiB  0.47%  84.9KiB
-           compute ...    178    136ms  0.42%   763μs   8.76MiB  0.28%  50.4KiB
-         compute di...    170    300ms  0.93%  1.77ms   43.7MiB  1.39%   263KiB
-         compute pB       178    103ms  0.32%   577μs   6.77MiB  0.22%  38.9KiB
-         update basis     170   13.5ms  0.04%  79.6μs   1.72MiB  0.05%  10.4KiB
-         detect cycly     170    682μs  0.00%  4.01μs    271KiB  0.01%  1.59KiB
-       inverse              8    2.37s  7.38%   297ms    248MiB  7.90%  31.1MiB
-       compute xB           8    666ms  2.07%  83.3ms   95.6MiB  3.04%  12.0MiB
-     Phase 2                8    1.34s  4.16%   167ms   89.3MiB  2.84%  11.2MiB
-       One iteration      435    1.33s  4.13%  3.05ms   85.4MiB  2.72%   201KiB
-         ratio test       427    843ms  2.62%  1.97ms   18.8MiB  0.60%  45.0KiB
-         compute en...    435    260ms  0.81%   599μs   8.18MiB  0.26%  19.3KiB
-           compute ...    435   34.1ms  0.11%  78.4μs   3.20MiB  0.10%  7.53KiB
-         PF               425    106ms  0.33%   249μs   48.3MiB  1.53%   116KiB
-         compute pB       435   24.1ms  0.08%  55.4μs   1.77MiB  0.06%  4.18KiB
-         compute di...    427   15.8ms  0.05%  37.0μs   1.33MiB  0.04%  3.19KiB
-         update basis     427   6.90ms  0.02%  16.2μs    147KiB  0.00%     353B
-         inverse            2   5.59ms  0.02%  2.79ms   2.76MiB  0.09%  1.38MiB
-         detect cycly     427   2.00ms  0.01%  4.69μs    751KiB  0.02%  1.76KiB
-       inverse              8   6.93ms  0.02%   866μs   3.78MiB  0.12%   484KiB
-       compute xB           8   1.00ms  0.00%   125μs   73.8KiB  0.00%  9.22KiB
-   presolve                 8    4.88s  15.2%   610ms    652MiB  20.7%  81.5MiB
-     row reduction          8    4.87s  15.2%   609ms    651MiB  20.7%  81.4MiB
-   scaling                  8    1.11s  3.44%   138ms    148MiB  4.71%  18.5MiB
+ run                        1    1.74s   100%   1.74s    100MiB  100%    100MiB
+   run core                 1    1.49s  85.5%   1.49s   34.7MiB  34.6%  34.7MiB
+     Phase 2                1    1.02s  58.4%   1.02s   21.7MiB  21.6%  21.7MiB
+       One iteration      125    1.02s  58.3%  8.13ms   21.6MiB  21.6%   177KiB
+         ratio test       124    687ms  39.4%  5.54ms   11.9MiB  11.9%  98.5KiB
+         compute en...    125    204ms  11.7%  1.63ms   4.59MiB  4.58%  37.6KiB
+           compute ...    125   25.9ms  1.49%   207μs   1.38MiB  1.38%  11.3KiB
+         PF               123   46.9ms  2.69%   381μs   2.02MiB  2.02%  16.8KiB
+         compute pB       125   12.3ms  0.71%  98.4μs    600KiB  0.58%  4.80KiB
+         compute di...    124   10.3ms  0.59%  83.4μs    587KiB  0.57%  4.73KiB
+         update basis     124   4.43ms  0.25%  35.7μs   73.6KiB  0.07%     608B
+         inverse            1   1.74ms  0.10%  1.74ms   12.0KiB  0.01%  12.0KiB
+         detect cycly     124   1.56ms  0.09%  12.6μs    270KiB  0.26%  2.17KiB
+       inverse              1   2.18ms  0.13%  2.18ms   12.0KiB  0.01%  12.0KiB
+       compute xB           1    292μs  0.02%   292μs   12.3KiB  0.01%  12.3KiB
+     Phase 1                1    470ms  26.9%   470ms   12.7MiB  12.6%  12.7MiB
+       One iteration       39    448ms  25.7%  11.5ms   8.67MiB  8.64%   228KiB
+         compute en...     39    213ms  12.2%  5.45ms   3.73MiB  3.72%  97.8KiB
+           compute ...     39   10.6ms  0.61%   272μs    336KiB  0.33%  8.62KiB
+         ratio test        38    191ms  11.0%  5.04ms   3.33MiB  3.32%  89.8KiB
+         PF                38   17.1ms  0.98%   450μs    656KiB  0.64%  17.3KiB
+         compute di...     38   4.88ms  0.28%   128μs    180KiB  0.18%  4.73KiB
+         compute pB        39   4.17ms  0.24%   107μs    187KiB  0.18%  4.80KiB
+         update basis      38   1.45ms  0.08%  38.3μs   22.6KiB  0.02%     608B
+         detect cycly      38    454μs  0.03%  11.9μs   83.0KiB  0.08%  2.18KiB
+       inverse              1   2.40ms  0.14%  2.40ms   13.3KiB  0.01%  13.3KiB
+       compute xB           1    459μs  0.03%   459μs   13.6KiB  0.01%  13.6KiB
+   presolve                 1    212ms  12.2%   212ms   41.8MiB  41.7%  41.8MiB
+     row reduction          1    212ms  12.2%   212ms   41.8MiB  41.7%  41.8MiB
+   scaling                  1   38.8ms  2.23%  38.8ms   22.8MiB  22.7%  22.8MiB
  ──────────────────────────────────────────────────────────────────────────────
 ```
