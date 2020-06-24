@@ -18,3 +18,8 @@ See [restuls.md](./examples/results.md) for numerical results.
 ## Applications
 
 - We are implementing a successive linear programming at https://github.com/exanauts/SuccessiveLinearProgramming
+
+## Acknowledgement
+
+This is a part of ExaSGD project.
+This material is based upon work supported by the U.S. Department of Energy, Office of Science, under contract number DE-AC02-06CH11357.
