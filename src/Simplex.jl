@@ -391,6 +391,8 @@ function run(prob::LpData;
     gpu = false,
     performance_io::IO = stdout)
 
+    reset_timer!(TO)
+
     @timeit TO "run" begin
         @timeit TO "presolve" begin
             presolve(prob)
