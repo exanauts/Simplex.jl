@@ -16,7 +16,7 @@ instances=[
 ]
 phaseone_methods = [
     Simplex.PhaseOne.ARTIFICIAL,
-    Simplex.PhaseOne.CPLEX,
+    # Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
     Simplex.Bland,
@@ -49,7 +49,7 @@ end
                         @testset "$(Symbol(method))" begin
                             for pivot in pivot_rules
                                 @testset "$(Symbol(pivot))" begin
-                                    netlib = "netlib/$i.mps"
+                                    netlib = "../netlib/$i.mps"
                                     @test Simplex.Optimal == run_netlib_instance(netlib, use_gpu, method, pivot)
                                 end
                             end
