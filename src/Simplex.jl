@@ -4,9 +4,9 @@ using SparseArrays
 using LinearAlgebra
 using Statistics
 using TimerOutputs
-using CuArrays, CUDAnative
+using CUDA
 
-TO = TimerOutput()
+const TO = TimerOutput()
 
 include("Constant.jl")
 include("GLPK.jl")
@@ -211,7 +211,7 @@ function pivot(spx::SpxData)
     spx.leave = -1
     spx.update = true
     best_t = 0.0
-    
+
     # compute the direction
     compute_direction(spx)
     # @show spx.d
@@ -384,7 +384,7 @@ function iterate(spx::SpxData)
     end
 end
 
-function run(prob::LpData; 
+function run(prob::LpData;
     basis::Vector{Int} = Int[],
     pivot_rule::PivotRule = Dantzig,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
@@ -421,7 +421,7 @@ function run(prob::LpData;
             if length(basis) == 0
                 println("Phase 1:")
                 @timeit TO "Phase 1" begin
-                    basis_status = PhaseOne.run(processed_prob, 
+                    basis_status = PhaseOne.run(processed_prob,
                         method = phase_one_method,
                         original_lp = prob,
                         pivot_rule = pivot_rule)
@@ -451,7 +451,7 @@ function run(prob::LpData;
         end # run core
 
     end # run
-    
+
     show(performance_io, TO)
     println(performance_io, "")
 end
@@ -461,7 +461,7 @@ function run_core(spx::SpxData)
         inverse(spx)
     end
     # @show spx.invB
-    
+
     compute_xB(spx)
     # @show spx.x
 

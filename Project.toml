@@ -4,9 +4,7 @@ authors = ["Kibaek Kim <kimk@anl.gov>"]
 version = "0.1.0"
 
 [deps]
-CUDAdrv = "c5f51814-7f29-56b8-a69c-e4d8f6be1fde"
-CUDAnative = "be33ccc6-a3ff-5ff2-a52e-74243cff1e17"
-CuArrays = "3a865a2d-5b23-5a0f-bc46-62713ec82fae"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
@@ -15,8 +13,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
-CUDAdrv = "6.2"
-CUDAnative = "3.0"
-CuArrays = "2.1"
 GLPK = "0.12, 0.13"
 TimerOutputs = "0.5"

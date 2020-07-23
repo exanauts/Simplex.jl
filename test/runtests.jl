@@ -1,13 +1,13 @@
 using Simplex
-using CuArrays
+using CUDA
 using SparseArrays
 using LinearAlgebra
 using Test
 
-# CuArrays.allowscalar(false)
+# CUDA.allowscalar(false)
 
 instances=[
-    "afiro", 
+    "afiro",
     "adlittle",
     "sc50a",
     "sc50b",
@@ -15,7 +15,7 @@ instances=[
     "sc205"
 ]
 phaseone_methods = [
-    Simplex.PhaseOne.ARTIFICIAL, 
+    Simplex.PhaseOne.ARTIFICIAL,
     Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
@@ -27,7 +27,7 @@ pivot_rules = [
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
     lp = Simplex.LpData(c, xl, xu, A, bl, bu)
-    Simplex.run(lp, 
+    Simplex.run(lp,
         gpu = use_gpu,
         phase_one_method = method,
         pivot_rule = pivot)
@@ -44,7 +44,7 @@ end
                         @testset "$(Symbol(method))" begin
                             for pivot in pivot_rules
                                 @testset "$(Symbol(pivot))" begin
-                                    netlib = "../netlib/$i.mps"
+                                    netlib = "netlib/$i.mps"
                                     @test Simplex.Optimal == run_netlib_instance(netlib, use_gpu, method, pivot)
                                 end
                             end
