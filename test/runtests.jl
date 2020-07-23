@@ -23,11 +23,15 @@ pivot_rules = [
     Simplex.Steepest,
     Simplex.Dantzig,
 ]
+arch_list = [
+    # "GPU",
+    "CPU",
+]
 
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
-    lp = Simplex.LpData(c, xl, xu, A, bl, bu)
-    Simplex.run(lp,
+    lp = Simplex.StandardLpData(c, xl, xu, A, bl, bu)
+    Simplex.run(lp, 
         gpu = use_gpu,
         phase_one_method = method,
         pivot_rule = pivot)
@@ -35,8 +39,9 @@ function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
 end
 
 @testset "netlib instances" begin
-    for use_gpu in [false, true]
-        arch = use_gpu ? "GPU" : "CPU"
+    # for use_gpu in [false, true]
+    for arch in arch_list
+        use_gpu = arch == "GPU" ? true : false
         @testset "$arch" begin
             for i in instances
                 @testset "$(i)" begin

@@ -30,7 +30,7 @@ bl = [-20; -Inf; 10; -10]
 bu = [Inf; 20.; 20.; Inf]
 c = [-10.; -12.; -12.]
 xl = [0.; 0.; -1.]; xu = [Inf; Inf; 10.]
-lp = Simplex.LpData(c, xl, xu, A, bl, bu)
+lp = Simplex.StandardLpData(c, xl, xu, A, bl, bu)
 # Simplex.print(lp)
 
 """
@@ -57,7 +57,6 @@ A = sparse(I, J, V)
 @test canonical.c == [-10; -12; -12; 0; 0; 0; 0]
 @test canonical.xl == [0; 0; -1; 0; 0; 0; 0]
 @test canonical.xu == [Inf; Inf; 10; Inf; Inf; 10; Inf]
-@test canonical.is_canonical == true
 
 """
 min                                           x8 + x9 + x10 + x11
@@ -93,7 +92,6 @@ A = sparse([1; 2; 3; 4; 1; 2; 3; 4; 1; 2; 3], [1; 1; 1; 1; 2; 2; 2; 2; 3; 3; 3],
 @test lp.c == [-10.; -12.; -12.;]
 @test lp.xl == [0; 0; -1]
 @test lp.xu == [Inf; Inf; 10]
-@test lp.is_canonical == false
 
 @test canonical.nrows == 4
 @test canonical.ncols == 7
@@ -107,7 +105,6 @@ A = sparse(I, J, V)
 @test canonical.c == [-10; -12; -12; 0; 0; 0; 0]
 @test canonical.xl == [0; 0; -1; 0; 0; 0; 0]
 @test canonical.xu == [Inf; Inf; 10; Inf; Inf; 10; Inf]
-@test canonical.is_canonical == true
 
 Simplex.phase_one(canonical)
 @test canonical.status == Simplex.Feasible

@@ -33,7 +33,7 @@ import ..PhaseOne
 import ..Artificial
 import Simplex
 
-function run(lp::Simplex.LpData; kwargs...)::Vector{Int}
+function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
 
     if !haskey(kwargs, :original_lp)
         @error "Argument :original_lp is not provided."

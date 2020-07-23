@@ -4,7 +4,7 @@ Presolve is a key to accelerate the linear programming solution.
 TODO: Need to check and implement the algorithms in
   Andersen and Andersen. Presolving in linear programming. 1995
 """
-function presolve(lp::LpData)
+function presolve(lp::StandardLpData)
   @timeit TO "row reduction" begin
     remove_empty_rows!(lp)
     remove_dependent_rows!(lp)
@@ -13,7 +13,7 @@ function presolve(lp::LpData)
   end
 end
 
-function remove_empty_rows!(lp::LpData)
+function remove_empty_rows!(lp::StandardLpData)
   nonempty = Int[]
   sizehint!(nonempty, lp.nrows)
 
@@ -33,12 +33,12 @@ function remove_empty_rows!(lp::LpData)
   end
 end
 
-function make_sparse!(lp::LpData{Array})
+function make_sparse!(lp::StandardLpData{Array})
   lp.A = sparse(lp.A)
 end
 
-function make_sparse!(lp::LpData{CuArray})
-  println("We do not make CuArray sparse.")
+function make_sparse!(lp::StandardLpData{CuArray})
+  @error "We do not make CuArray sparse."
 end
 
 """
@@ -50,7 +50,7 @@ The implementation is based on
 The computational efficiency can be improved by
   Andersen. Finding all linearly dependent rows in large-scale linear programming. 1995
 """
-function remove_dependent_rows!(lp::LpData{Array})
+function remove_dependent_rows!(lp::StandardLpData{Array})
   m, n = size(lp.A)
 
   # Append identity matrix to the last
@@ -106,7 +106,7 @@ function remove_dependent_rows!(lp::LpData{Array})
   end
 end
 
-function remove_dependent_rows!(lp::LpData{CuArray})
+function remove_dependent_rows!(lp::StandardLpData{CuArray})
   m, n = size(lp.A)
 
   # Append identity matrix to the last
@@ -162,7 +162,7 @@ end
 """
 Scaling algorithm from Implementation of the Simplex Method, Ping-Qi Pan (2014)
 """
-function scaling!(lp::LpData)
+function scaling!(lp::StandardLpData)
     maxrounds = 50
     round = 1
     while round <= maxrounds
@@ -184,7 +184,7 @@ function scaling!(lp::LpData)
     normalizing_columns!(lp)
 end
 
-function normalizing_rows!(lp::LpData)
+function normalizing_rows!(lp::StandardLpData)
   m, n = size(lp.A)
   for i = 1:m
     lp.rd[i] = -Inf
@@ -200,7 +200,7 @@ function normalizing_rows!(lp::LpData)
   lp.bu ./= lp.rd
 end
 
-function scaling_rows!(lp::LpData)
+function scaling_rows!(lp::StandardLpData)
   m, n = size(lp.A)
   for i = 1:m
     mina = Inf; maxa = -Inf
@@ -218,7 +218,7 @@ function scaling_rows!(lp::LpData)
   lp.bu ./= lp.rd
 end
 
-function normalizing_columns!(lp::LpData{Array})
+function normalizing_columns!(lp::StandardLpData{Array})
   m, n = size(lp.A)
   vals = nonzeros(lp.A)
   for j = 1:n
@@ -236,7 +236,7 @@ function normalizing_columns!(lp::LpData{Array})
   lp.xu .*= lp.cd
 end
 
-function normalizing_columns!(lp::LpData{CuArray})
+function normalizing_columns!(lp::StandardLpData{CuArray})
   m, n = size(lp.A)
   for j = 1:n
     lp.cd[j] = -Inf
@@ -253,7 +253,7 @@ function normalizing_columns!(lp::LpData{CuArray})
   lp.xu .*= lp.cd
 end
 
-function scaling_columns!(lp::LpData{Array})
+function scaling_columns!(lp::StandardLpData{Array})
   m, n = size(lp.A)
   vals = nonzeros(lp.A)
   for j = 1:n
@@ -273,7 +273,7 @@ function scaling_columns!(lp::LpData{Array})
   lp.xu .*= lp.cd
 end
 
-function scaling_columns!(lp::LpData{CuArray})
+function scaling_columns!(lp::StandardLpData{CuArray})
   m, n = size(lp.A)
   for j = 1:n
     mina = Inf; maxa = -Inf

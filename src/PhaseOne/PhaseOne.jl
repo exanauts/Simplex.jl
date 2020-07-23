@@ -11,7 +11,7 @@ include("Cplex.jl")
     CPLEX,
 )
 
-function run(lp::Simplex.LpData; 
+function run(lp::Simplex.CanonicalLpData; 
     method::Method = CPLEX, 
     kwargs...)::Vector{Int}
     

@@ -1,4 +1,4 @@
-function print(lp::LpData)
+function print(lp::StandardLpData)
     println("Number of rows   : $(lp.nrows)")
     println("Number of columns: $(lp.ncols)")
     println("Constraint matrix: $(Matrix(lp.A))")
@@ -9,7 +9,17 @@ function print(lp::LpData)
     println("Column upper bound: $(lp.xu)")
 end
 
-function summary(lp::LpData)
+function print(lp::CanonicalLpData)
+    println("Number of rows   : $(lp.nrows)")
+    println("Number of columns: $(lp.ncols)")
+    println("Constraint matrix: $(Matrix(lp.A))")
+    println("Row bounds: $(lp.b)")
+    println("Objective coefficients: $(lp.c)")
+    println("Column lower bound: $(lp.xl)")
+    println("Column upper bound: $(lp.xu)")
+end
+
+function summary(lp::StandardLpData)
     println("Number of rows   : $(lp.nrows)")
     println("Number of columns: $(lp.ncols)")
     # println("A: Min $(minimum(nonzeros(lp.A))), Max $(maximum(nonzeros(lp.A)))")
