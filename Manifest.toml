@@ -269,9 +269,9 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[SIMDPirates]]
 deps = ["VectorizationBase"]
-git-tree-sha1 = "cbe8797ac354d0b1dfe75d983429938db834b706"
+git-tree-sha1 = "ffa6df58c5d7b148e2da027956089ba232f7c81a"
 uuid = "21efa798-c60a-11e8-04d3-e1a92915a26a"
-version = "0.8.16"
+version = "0.8.17"
 
 [[SLEEFPirates]]
 deps = ["Libdl", "SIMDPirates", "VectorizationBase"]
