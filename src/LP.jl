@@ -2,7 +2,44 @@
 Linear programming problem
 """
 
-mutable struct LpData{T<:AbstractArray}
+abstract type AbstractLpData{T<:AbstractArray} end
+
+function initialize!(lp::AbstractLpData, c::Array, xl::Array, xu::Array, 
+        A::SparseMatrixCSC{Float64,Int}, x0::Array, TArray)
+    lp.nrows, lp.ncols = size(A)
+
+    @assert lp.ncols == length(c)
+    @assert lp.ncols == length(xl)
+    @assert lp.ncols == length(xu)
+
+    lp.c = TArray{Float64}(undef, lp.ncols)
+    lp.xl = TArray{Float64}(undef, lp.ncols)
+    lp.xu = TArray{Float64}(undef, lp.ncols)
+    lp.x = TArray{Float64}(undef, lp.ncols)
+
+    lp.rd = TArray{Float64}(undef, lp.nrows)
+    lp.cd = TArray{Float64}(undef, lp.ncols)
+
+    copyto!(lp.c, c)
+    copyto!(lp.xl, xl)
+    copyto!(lp.xu, xu)
+    
+    # copy initial solution; or zeros
+    if length(x0) == lp.ncols
+        copyto!(lp.x, x0)
+    else
+        fill!(lp.x, 0)
+    end
+
+    # DENSE A matrix
+    lp.A = TArray == CuArray ? TArray{Float64,2}(Matrix(A)) : A
+    # lp.A = TArray == CuVector ? CuArrays.CUSPARSE.CuSparseMatrixCSC(A) : A
+
+    lp.status = NotSolved
+    lp.TArray = TArray
+end
+
+mutable struct StandardLpData{T} <: AbstractLpData{T}
     nrows::Int
     ncols::Int
 
@@ -18,10 +55,9 @@ mutable struct LpData{T<:AbstractArray}
     cd::T # temp for scaling
 
     status::Status
-    is_canonical::Bool
     TArray
 
-    function LpData(c::Array, xl::Array, xu::Array, 
+    function StandardLpData(c::Array, xl::Array, xu::Array, 
             A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
             x0::Array = Float64[],
             TArray = Array)
@@ -32,54 +68,86 @@ mutable struct LpData{T<:AbstractArray}
         end
 
         lp = new{TArray}()
-        lp.nrows, lp.ncols = size(A)
+
+        initialize!(lp, c, xl, xu, A, x0, TArray)
 
         @assert lp.nrows == length(bl)
         @assert lp.nrows == length(bu)
-        @assert lp.ncols == length(c)
-        @assert lp.ncols == length(xl)
-        @assert lp.ncols == length(xu)
-
         lp.bl = TArray{Float64}(undef, lp.nrows)
         lp.bu = TArray{Float64}(undef, lp.nrows)
-        lp.c = TArray{Float64}(undef, lp.ncols)
-        lp.xl = TArray{Float64}(undef, lp.ncols)
-        lp.xu = TArray{Float64}(undef, lp.ncols)
-        lp.x = TArray{Float64}(undef, lp.ncols)
-
-        lp.rd = TArray{Float64}(undef, lp.nrows)
-        lp.cd = TArray{Float64}(undef, lp.ncols)
-
         copyto!(lp.bl, bl)
         copyto!(lp.bu, bu)
-        copyto!(lp.c, c)
-        copyto!(lp.xl, xl)
-        copyto!(lp.xu, xu)
-        
-        # copy initial solution; or zeros
-        if length(x0) == lp.ncols
-            copyto!(lp.x, x0)
-        else
-            fill!(lp.x, 0)
-        end
-
-        # DENSE A matrix
-        lp.A = TArray == CuArray ? TArray{Float64,2}(Matrix(A)) : A
-        # lp.A = TArray == CuVector ? CuArrays.CUSPARSE.CuSparseMatrixCSC(A) : A
-
-        lp.status = NotSolved
-        lp.is_canonical = false
-        lp.TArray = TArray
 
         return lp
     end
 end
 
-LpData(c::Array, xl::Array, xu::Array, 
-    A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
-    TArray) = LpData(c, xl, xu, A, bl, bu, Float64[], TArray)
+mutable struct CanonicalLpData{T} <: AbstractLpData{T}
+    nrows::Int
+    ncols::Int
 
-cpu2gpu(lp::LpData{Array}) = LpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
+    A  # constraint matrix
+    b::T # row bound vector
+    c::T  # linear objective coefficient vector
+    xl::T # column lower bound vector
+    xu::T # column upper bound vector
+    x::T  # column solution vector
+
+    rd::T # temp for scaling
+    cd::T # temp for scaling
+
+    status::Status
+    TArray
+
+    function CanonicalLpData(c::Array, xl::Array, xu::Array, 
+            A::SparseMatrixCSC{Float64,Int}, b::Array,
+            x0::Array = Float64[],
+            TArray = Array)
+
+        # Check the array type
+        if !in(TArray,[CuArray,Array])
+            error("Unkown array type $TArray.")
+        end
+
+        lp = new{TArray}()
+
+        initialize!(lp, c, xl, xu, A, x0, TArray)
+
+        @assert lp.nrows == length(b)
+        lp.b = TArray{Float64}(undef, lp.nrows)
+        copyto!(lp.b, b)
+
+        return lp
+    end
+end
+
+cpu2gpu(lp::StandardLpData{Array}) = StandardLpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
+cpu2gpu(lp::StandardLpData{CuArray}) = lp
+cpu2gpu(lp::CanonicalLpData{Array}) = CanonicalLpData(lp.c, lp.xl, lp.xu, lp.A, lp.b, lp.x, CuArray)
+cpu2gpu(lp::CanonicalLpData{CuArray}) = lp
+
+function rhs(lp::StandardLpData)
+    @error "This is available for canonical form only."
+end
+rhs(lp::CanonicalLpData) = lp.b
+
+function assign_rhs!(lp::StandardLpData, bl, bu)
+    lp.bl = bl
+    lp.bu = bu
+end
+
+function assign_rhs!(lp::CanonicalLpData, b)
+    lp.b = b
+end
+
+function divide_rhs!(lp::StandardLpData, bl, bu)
+    lp.bl ./= bl
+    lp.bu ./= bu
+end
+
+function divide_rhs!(lp::CanonicalLpData, b)
+    lp.b ./= b
+end
 
 """
 Given the original LP of the form
@@ -102,7 +170,7 @@ the canonical form is given by
     0 <= s2 <= Inf
     0 <= s3 <= bu - bl
 """
-function canonical_form(standard::LpData)::LpData
+function canonical_form(standard::StandardLpData)::CanonicalLpData
     # count the number of inequality constraints
     ineq = Int[]
     for i = 1:standard.nrows
@@ -153,8 +221,8 @@ function canonical_form(standard::LpData)::LpData
 
     # create a canonical form data
     # @show standard.TArray
-    canonical = LpData(c, xl, xu, A, b, b, standard.TArray)
-    canonical.is_canonical = true
+    canonical = CanonicalLpData(c, xl, xu, A, b, [], standard.TArray)
 
     return canonical
 end
+canonical_form(standard::CanonicalLpData) = standard

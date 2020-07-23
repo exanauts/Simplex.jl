@@ -14,7 +14,7 @@ include("LP.jl")
 include("PhaseOne/PhaseOne.jl")
 
 mutable struct SpxData{T<:AbstractArray}
-    lpdata::LpData
+    lpdata::AbstractLpData{T}
 
     basis_status::Vector{Int}
     basic::Vector{Int}
@@ -64,7 +64,7 @@ mutable struct SpxData{T<:AbstractArray}
     # start index of the artificial variables
     start_artvars::Int
 
-    function SpxData(lpdata::LpData{T}) where T
+    function SpxData(lpdata::AbstractLpData{T}) where T
         spx = new{T}()
         spx.lpdata = lpdata
 
@@ -117,7 +117,7 @@ mutable struct SpxData{T<:AbstractArray}
 end
 
 objective(spx::SpxData) = (spx.lpdata.c' * spx.x)
-rhs(spx::SpxData) = spx.lpdata.bl
+rhs(spx::SpxData) = rhs(spx.lpdata)
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
@@ -301,7 +301,7 @@ end
 function detect_cycle(spx::SpxData)
     @timeit TO "detect cycly" begin
         if in(spx.basic, spx.history)
-            println("Cycle is detected.")
+            @info "Cycle is detected."
             spx.status = Cycle
         end
         if length(spx.history) == MAX_HISTORY
@@ -384,7 +384,7 @@ function iterate(spx::SpxData)
     end
 end
 
-function run(prob::LpData; 
+function run(prob::StandardLpData; 
     basis::Vector{Int} = Int[],
     pivot_rule::PivotRule = Dantzig,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
@@ -410,7 +410,6 @@ function run(prob::LpData;
 
         # Use GPU?
         processed_prob = gpu ? Simplex.cpu2gpu(canonical) : canonical
-        processed_prob.is_canonical = true
 
         @timeit TO "run core" begin
             # load the problem
@@ -466,8 +465,14 @@ function run_core(spx::SpxData)
     # @show spx.x
 
     # main iterations
-    while spx.status == Solve && spx.iter < MAX_ITER
+    my_pivot_rule = spx.pivot_rule
+    while spx.status in [Solve, Cycle] && spx.iter < MAX_ITER
+        # Use Bland's rule if cycle is detected
+        if spx.status == Cycle
+            spx.pivot_rule = Bland
+        end
         iterate(spx)
+        spx.pivot_rule = my_pivot_rule
     end
 end
 

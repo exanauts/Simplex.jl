@@ -26,7 +26,7 @@ for instance = ["sc50a", "sc50b", "sc105", "sc205"]
             println(fp, "\n### CPU\n")
         end
         println(fp, "```")
-        lp = Simplex.LpData(c, xl, xu, A, bl, bu)
+        lp = Simplex.StandardLpData(c, xl, xu, A, bl, bu)
         Simplex.run(lp, gpu = use_gpu, performance_io = fp)
         println(fp, "```")
 

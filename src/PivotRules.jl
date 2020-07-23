@@ -25,7 +25,7 @@ function pivot_Bland(spx::SpxData)
             end
         end
     end
-    @show spx.enter, spx.r[spx.enter_pos]
+    # @show spx.enter, spx.r[spx.enter_pos]
 end
 
 # Steepest-edge rule

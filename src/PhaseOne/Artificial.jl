@@ -36,9 +36,7 @@ import Simplex
             xN[j] = 0.0
         end
 """
-function reformulate(lp::Simplex.LpData)
-    @assert lp.is_canonical == true
-
+function reformulate(lp::Simplex.CanonicalLpData)
     nrows = lp.nrows
     ncols = lp.ncols + nrows
 
@@ -75,7 +73,7 @@ function reformulate(lp::Simplex.LpData)
 
     # rhs
     b = Array{Float64}(undef, lp.nrows)
-    copyto!(b, lp.bl .- lp.A * lp.x)
+    copyto!(b, lp.b .- lp.A * lp.x)
 
     # create the submatrix for slack
     I = collect(1:nrows)
@@ -92,10 +90,10 @@ function reformulate(lp::Simplex.LpData)
     # create the matrix in canonical form
     A = [sparse(Matrix(lp.A)) S]
 
-    return Simplex.LpData(c, xl, xu, A, Array(lp.bl), Array(lp.bu), Array(lp.x), lp.TArray)
+    return Simplex.CanonicalLpData(c, xl, xu, A, Array(lp.b), Array(lp.x), lp.TArray)
 end
 
-function run(prob::Simplex.LpData; kwargs...)::Vector{Int}
+function run(prob::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
 
     if !haskey(kwargs, :pivot_rule)
         @error "Argument :pivot_rule is not provided."
