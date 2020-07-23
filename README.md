@@ -13,7 +13,7 @@ The algorithm runs on CPU and GPU.
 julia --project=.. ../examples/netlib.jl
 ```
 
-See [restuls.md](./examples/results.md) for numerical results.
+See [results.md](./examples/results.md) for numerical results.
 
 ## Applications
 

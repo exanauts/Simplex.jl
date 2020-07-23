@@ -1,6 +1,6 @@
 module Artificial
 
-using CuArrays
+using CUDA
 using SparseArrays
 
 import ..PhaseOne
@@ -13,7 +13,7 @@ import Simplex
     The canonical form
 
     minimize c x
-    subject to 
+    subject to
         A x == b
         xl <= x <= xu
 
@@ -27,7 +27,7 @@ import Simplex
         0 <= a1 <= Inf
         0 <= a2 <= Inf,
 
-    where 
+    where
         if xl[j] > -Inf
             xN[j] = xl[j]
         elseif xu[j] < Inf
@@ -50,7 +50,7 @@ function reformulate(lp::Simplex.CanonicalLpData)
     # cpu memory
     if lp.TArray == Array
         x = lp.x
-    elseif lp.TArray == CuArray
+    elseif lp.TArray == CUDA.CuArray
         x = Array{Float64}(undef, lp.ncols)
     end
 

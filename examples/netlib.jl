@@ -1,5 +1,5 @@
 using Simplex
-using CuArrays
+using CUDA
 using Dates
 
 """
@@ -20,7 +20,7 @@ for instance = ["sc50a", "sc50b", "sc105", "sc205"]
     println(fp, "- nnz     : $nnz")
     println(fp, "- sparsity: $(nnz / (m*n))")
     for use_gpu in [false, true]
-        if use_gpu 
+        if use_gpu
             println(fp, "\n### GPU\n")
         else
             println(fp, "\n### CPU\n")
