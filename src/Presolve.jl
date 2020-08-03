@@ -8,12 +8,14 @@ function presolve(lp::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     @timeit TO "row reduction" begin
         tmp_A = lp.A
         to_keep = collect(1:nrows(lp))
+        # Remove empty rows
         non_empty = get_empty_rows(tmp_A)
         if length(non_empty) < nrows(lp)
             println("Presolve removed $(nrows(lp)-length(non_empty)) empty rows.")
             tmp_A = tmp_A[non_empty, :]
             to_keep = non_empty
         end
+        # Remove dependent rows
         dep_rows = get_dependent_rows(tmp_A)
         if length(dep_rows) > 0
             indeprows = [i for i=1:size(tmp_A, 1) if !in(i,dep_rows)]
@@ -62,7 +64,6 @@ function get_dependent_rows(A::AbstractArray{T, 2}) where T
     m, n = size(A)
 
     # Append identity matrix to the last
-    # I = sparse(collect(1:m), collect(1:m), ones(m))
     A2 = [A I]
 
     basis = collect((1+n):(m+n))

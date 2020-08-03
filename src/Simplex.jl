@@ -412,10 +412,6 @@ function run(prob::MatOI.AbstractLPForm{T};
 
         # convert the problem into a canonical form
         canonical = Simplex.canonical_form(presolve_prob)
-        # canonical = MatOI.change_form(
-        #     MatOI.LPSolverForm{T, typeof(prob.A)},
-        #     presolve_prob,
-        # )
 
         # print out the summary of problem
         # summary(canonical)

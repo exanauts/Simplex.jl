@@ -14,7 +14,7 @@ const MOI = MatOI.MOI
 
 """
     This creates a reformulation to begin with all artificial basis.
-    This is the simplest way to constrcut the initial basis.
+    This is the simplest way to construct the initial basis.
 
     The canonical form
 
@@ -51,6 +51,7 @@ function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
     c = VT(c)
 
     # column bounds
+    # TODO: build thing directly on GPU
     xl = append!(deepcopy(Array(lp.v_lb)), zeros(lp_nrows))
     xu = append!(deepcopy(Array(lp.v_ub)), ones(lp_nrows)*Inf)
     xl = VT(xl)
@@ -97,7 +98,8 @@ function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
     senses = fill(MatOI.EQUAL_TO, nrows(lp))
     return MatOI.LPSolverForm{T, typeof(A), typeof(c)}(
         MOI.MIN_SENSE,
-        c, A, lp.b, senses, xl, xu)
+        c, A, lp.b, senses, xl, xu
+    )
 end
 
 function run(prob::MatOI.LPSolverForm, x::AbstractArray; kwargs...)

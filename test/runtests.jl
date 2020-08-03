@@ -1,4 +1,3 @@
-using Revise
 using Simplex
 using CUDA
 using SparseArrays
@@ -28,7 +27,7 @@ pivot_rules = [
     Simplex.Dantzig,
 ]
 arch_list = [
-    "GPU",
+    # "GPU",
     "CPU",
 ]
 

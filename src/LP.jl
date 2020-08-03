@@ -1,148 +1,3 @@
-"""
-Linear programming problem
-"""
-
-# abstract type AbstractLpData{T<:AbstractArray} end
-
-# function initialize!(lp::AbstractLpData, c::Array, xl::Array, xu::Array,
-#         A::SparseMatrixCSC{Float64,Int}, x0::Array, TArray)
-#     lp.nrows, lp.ncols = size(A)
-
-#     @assert lp.ncols == length(c)
-#     @assert lp.ncols == length(xl)
-#     @assert lp.ncols == length(xu)
-
-#     lp.c = TArray{Float64}(undef, lp.ncols)
-#     lp.xl = TArray{Float64}(undef, lp.ncols)
-#     lp.xu = TArray{Float64}(undef, lp.ncols)
-#     lp.x = TArray{Float64}(undef, lp.ncols)
-
-#     lp.rd = TArray{Float64}(undef, lp.nrows)
-#     lp.cd = TArray{Float64}(undef, lp.ncols)
-
-#     copyto!(lp.c, c)
-#     copyto!(lp.xl, xl)
-#     copyto!(lp.xu, xu)
-
-#     # copy initial solution; or zeros
-#     if length(x0) == lp.ncols
-#         copyto!(lp.x, x0)
-#     else
-#         fill!(lp.x, 0)
-#     end
-
-#     # DENSE A matrix
-#     lp.A = TArray == CuArray ? TArray{Float64,2}(Matrix(A)) : A
-#     # lp.A = TArray == CuVector ? CuArrays.CUSPARSE.CuSparseMatrixCSC(A) : A
-
-#     lp.status = NotSolved
-#     lp.TArray = TArray
-# end
-
-# mutable struct StandardLpData{T} <: AbstractLpData{T}
-#     nrows::Int
-#     ncols::Int
-
-#     A  # constraint matrix
-#     bl::T # row lower bound vector
-#     bu::T # row upper bound vector
-#     c::T  # linear objective coefficient vector
-#     xl::T # column lower bound vector
-#     xu::T # column upper bound vector
-#     x::T  # column solution vector
-
-#     rd::T # temp for scaling
-#     cd::T # temp for scaling
-
-#     status::Status
-#     TArray
-
-#     function StandardLpData(c::Array, xl::Array, xu::Array,
-#             A::SparseMatrixCSC{Float64,Int}, bl::Array, bu::Array,
-#             x0::Array = Float64[],
-#             TArray = Array)
-
-#         # Check the array type
-#         if !in(TArray,[CuArray,Array])
-#             error("Unkown array type $TArray.")
-#         end
-
-#         lp = new{TArray}()
-
-#         initialize!(lp, c, xl, xu, A, x0, TArray)
-
-#         @assert lp.nrows == length(bl)
-#         @assert lp.nrows == length(bu)
-#         lp.bl = TArray{Float64}(undef, lp.nrows)
-#         lp.bu = TArray{Float64}(undef, lp.nrows)
-#         copyto!(lp.bl, bl)
-#         copyto!(lp.bu, bu)
-
-#         return lp
-#     end
-# end
-
-# mutable struct CanonicalLpData{T} <: AbstractLpData{T}
-#     nrows::Int
-#     ncols::Int
-
-#     A  # constraint matrix
-#     b::T # row bound vector
-#     c::T  # linear objective coefficient vector
-#     xl::T # column lower bound vector
-#     xu::T # column upper bound vector
-#     x::T  # column solution vector
-
-#     rd::T # temp for scaling
-#     cd::T # temp for scaling
-
-#     status::Status
-#     TArray
-
-#     function CanonicalLpData(c::Array, xl::Array, xu::Array,
-#             A::SparseMatrixCSC{Float64,Int}, b::Array,
-#             x0::Array = Float64[],
-#             TArray = Array)
-
-#         # Check the array type
-#         if !in(TArray,[CuArray,Array])
-#             error("Unkown array type $TArray.")
-#         end
-
-#         lp = new{TArray}()
-
-#         initialize!(lp, c, xl, xu, A, x0, TArray)
-
-#         @assert lp.nrows == length(b)
-#         lp.b = TArray{Float64}(undef, lp.nrows)
-#         copyto!(lp.b, b)
-
-#         return lp
-#     end
-# end
-
-# function rhs(lp::StandardLpData)
-#     @error "This is available for canonical form only."
-# end
-# rhs(lp::CanonicalLpData) = lp.b
-
-# function assign_rhs!(lp::StandardLpData, bl, bu)
-#     lp.bl = bl
-#     lp.bu = bu
-# end
-
-# function assign_rhs!(lp::CanonicalLpData, b)
-#     lp.b = b
-# end
-
-# function divide_rhs!(lp::StandardLpData, bl, bu)
-#     lp.bl ./= bl
-#     lp.bu ./= bu
-# end
-
-# function divide_rhs!(lp::CanonicalLpData, b)
-#     lp.b ./= b
-# end
 
 """
 Given the original LP of the form
@@ -216,7 +71,6 @@ function canonical_form(standard::MatOI.LPForm{T, AT}) where {T, AT}
 
     # create a canonical form data
     # @show standard.TArray
-    # canonical = CanonicalLpData(c, xl, xu, A, b, [], standard.TArray)
     senses = fill(MatOI.EQUAL_TO, lp_nrows)
     canonical = MatOI.LPSolverForm{T, typeof(A), typeof(c)}(
         MOI.MIN_SENSE, c, A, b, senses, xl, xu
@@ -238,7 +92,8 @@ function cpu2gpu(lp::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     v_ub = convert(CuArray{T, 1}, lp.v_ub)
 
     return MatOI.LPForm{T, typeof(A), typeof(b)}(
-        lp.direction, c, A, c_lb, c_ub, v_lb, v_ub)
+        lp.direction, c, A, c_lb, c_ub, v_lb, v_ub
+    )
 end
 
 function cpu2gpu(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
@@ -252,5 +107,6 @@ function cpu2gpu(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
     v_ub = convert(CuArray{T, 1}, lp.v_ub)
 
     return MatOI.LPSolverForm{T, typeof(A), typeof(b)}(
-        lp.direction, c, A, b, lp.senses, v_lb, v_ub)
+        lp.direction, c, A, b, lp.senses, v_lb, v_ub
+    )
 end
