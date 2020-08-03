@@ -1,6 +1,9 @@
 module PhaseOne
 
+using MatrixOptInterface
 import Simplex
+
+const MatOI = MatrixOptInterface
 
 include("Artificial.jl")
 include("Cplex.jl")
@@ -11,14 +14,15 @@ include("Cplex.jl")
     CPLEX,
 )
 
-function run(lp::Simplex.CanonicalLpData; 
-    method::Method = CPLEX, 
-    kwargs...)::Vector{Int}
-    
+function run(lp::MatOI.LPSolverForm,
+    x::AbstractArray;
+    method::Method = CPLEX,
+    kwargs...)
+
     if method == ARTIFICIAL
-        return Artificial.run(lp; kwargs...)
+        return Artificial.run(lp, x; kwargs...)
     elseif method == CPLEX
-        return Cplex.run(lp; kwargs...)
+        return Cplex.run(lp, x; kwargs...)
     end
 end
 

@@ -7,7 +7,7 @@ function pivot_Bland(spx::SpxData)
     # @show spx.r
     # @show spx.nonbasic
 
-    min_enter = spx.lpdata.ncols + 1
+    min_enter = ncols(spx.lpdata) + 1
     for j = 1:length(spx.r)
         if spx.nonbasic[j] < min_enter
             if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER

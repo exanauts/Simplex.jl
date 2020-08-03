@@ -187,6 +187,12 @@ git-tree-sha1 = "cd2049c055c7d192a235670d50faa375361624ba"
 uuid = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 version = "0.9.14"
 
+[[MatrixOptInterface]]
+deps = ["LinearAlgebra", "MathOptInterface", "SparseArrays", "Test"]
+path = "/home/fpacaud/.julia/dev/MatrixOptInterface"
+uuid = "2f4eb8e6-3e35-4ae4-8c7a-f3d7d9bf20ed"
+version = "0.1.0"
+
 [[MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "Random", "Sockets"]
 git-tree-sha1 = "426a6978b03a97ceb7ead77775a1da066343ec6e"

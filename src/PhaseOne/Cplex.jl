@@ -29,11 +29,16 @@ where we treat the constraint bl <= A3 x <= bu as the form A x >= b.
 
 module Cplex
 
+using MatrixOptInterface
 import ..PhaseOne
 import ..Artificial
 import Simplex
+import Simplex: nrows, ncols
 
-function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
+const MatOI = MatrixOptInterface
+const MOI = MatOI.MOI
+
+function run(lp::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
 
     if !haskey(kwargs, :original_lp)
         @error "Argument :original_lp is not provided."
@@ -48,12 +53,12 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     m2_idx = Int[]
     m3_idx = Int[]
 
-    for i = 1:original_lp.nrows
-        if original_lp.bl[i] == original_lp.bu[i]
+    for i = 1:nrows(original_lp)
+        if original_lp.c_lb[i] == original_lp.c_ub[i]
             push!(m3_idx, i)
-        elseif original_lp.bl[i] > -Inf
+        elseif original_lp.c_lb[i] > -Inf
             push!(m2_idx, i)
-        elseif original_lp.bu[i] < Inf
+        elseif original_lp.c_ub[i] < Inf
             push!(m1_idx, i)
         end
     end
@@ -64,19 +69,19 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     # So we use a permuatation vector.
     perm_A = [m1_idx; m2_idx; m3_idx]
     # @show m1, m2, m3
-    
-    # penalty
-    q = Array{Float64}(undef, original_lp.ncols)
 
-    for j = 1:original_lp.ncols
-        if original_lp.xl[j] > -Inf
-            if original_lp.xu[j] < Inf
-                q[j] = original_lp.xl[j] - original_lp.xu[j]
+    # penalty
+    q = Array{Float64}(undef, ncols(original_lp))
+
+    for j = 1:ncols(original_lp)
+        if original_lp.v_lb[j] > -Inf
+            if original_lp.v_ub[j] < Inf
+                q[j] = original_lp.v_lb[j] - original_lp.v_ub[j]
             else
-                q[j] = original_lp.xl[j]
+                q[j] = original_lp.v_lb[j]
             end
-        elseif original_lp.xu[j] < Inf
-            q[j] = -original_lp.xu[j]
+        elseif original_lp.v_ub[j] < Inf
+            q[j] = -original_lp.v_ub[j]
         else
             q[j] = 0.0
         end
@@ -92,17 +97,17 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     # @show C, q[C]
 
     # Step 1
-    I = [ones(Int64, m1 + m2); zeros(Int64, original_lp.nrows - m1 - m2)]
-    r = [ones(Int64, m1 + m2); zeros(Int64, original_lp.nrows - m1 - m2)]
-    v = fill(Inf, original_lp.nrows)
-    B = collect(1:(m1+m2)) .+ original_lp.ncols
+    I = [ones(Int64, m1 + m2); zeros(Int64, nrows(original_lp) - m1 - m2)]
+    r = [ones(Int64, m1 + m2); zeros(Int64, nrows(original_lp) - m1 - m2)]
+    v = fill(Inf, nrows(original_lp))
+    B = collect(1:(m1+m2)) .+ ncols(original_lp)
 
     # Step 2
-    for k = 1:original_lp.ncols
+    for k = 1:ncols(original_lp)
         # Step 2a
         alpha = 0.
         max_l = -1
-        for i = 1:original_lp.nrows
+        for i = 1:nrows(original_lp)
             if r[i] == 0
                 absA = abs(original_lp.A[perm_A[i],C[k]])
                 if alpha < absA
@@ -116,7 +121,7 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
             # println("Step 2a: Adding $(C[k]) to basis")
             I[max_l] = 1
             v[max_l] = alpha
-            for i = 1:original_lp.nrows
+            for i = 1:nrows(original_lp)
                 if abs(original_lp.A[perm_A[i],C[k]]) > 0
                     r[i] += 1
                 end
@@ -126,7 +131,7 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
         # Step 2b
         alpha = 0.
         max_l = -1
-        for i = 1:original_lp.nrows
+        for i = 1:nrows(original_lp)
             if abs(original_lp.A[perm_A[i],C[k]]) > 0.01 * v[i]
                 continue
             end
@@ -143,7 +148,7 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
             # println("Step 2b: Adding $(C[k]) to basis")
             I[max_l] = 1
             v[max_l] = alpha
-            for i = 1:original_lp.nrows
+            for i = 1:nrows(original_lp)
                 if abs(original_lp.A[perm_A[i],C[k]]) > 0
                     r[i] += 1
                 end
@@ -152,20 +157,20 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     end
 
     # Step 3
-    for i = (m1+m2+1):original_lp.nrows
+    for i = (m1+m2+1):nrows(original_lp)
         if I[i] == 0
-            push!(B, original_lp.ncols + m1 + m2 + perm_A[i])
+            push!(B, ncols(original_lp) + m1 + m2 + perm_A[i])
             # println("Step 3: Adding $(original_lp.ncols + m1 + m2 + perm_A[i]) to basis")
         end
     end
-    # @show length(B), original_lp.nrows, B
-    @assert length(B) == original_lp.nrows
+    # @show length(B), nrows(original_lp), B
+    @assert length(B) == nrows(original_lp)
 
     # convert to phase-one form
     p1lp = Artificial.reformulate(lp)
 
     # load the problem
-    spx = Simplex.SpxData(p1lp)
+    spx = Simplex.SpxData(p1lp, Array)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
@@ -175,19 +180,19 @@ function run(lp::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     Simplex.run_core(spx)
 
     if Simplex.objective(spx) > 1e-6
-        lp.status = Simplex.Infeasible
+        status = Simplex.Infeasible
         @warn("Infeasible.")
     else
         if in(Simplex.BASIS_BASIC, spx.basis_status[(lp.ncols+1):end])
             @warn("Could not remove artificial variables from basis... :(")
-            lp.status = Simplex.Infeasible
+            status = Simplex.Infeasible
         else
-            lp.status = Simplex.Feasible
-            lp.x .= spx.x[1:lp.ncols]
+            status = Simplex.Feasible
+            x .= spx.x[1:lp.ncols]
         end
     end
-    
-    return spx.basis_status[1:lp.ncols]
+
+    return status, spx.basis_status[1:lp.ncols]
 end
 
 end
