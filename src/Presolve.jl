@@ -169,11 +169,9 @@ function scaling!(lp::MatOI.AbstractLPForm)
         aratio = matrix_coefficient_ratio(lp.A)
         # @show aratio
         scaling_rows!(lp)
-        # println("Sacling rows: max|aij| $(maximum(lp.rd)) min|aij| $(minimum(lp.rd))")
 
         scaling_columns!(lp)
         sratio = matrix_coefficient_ratio(lp.A)
-        # println("Sacling columns: max|aij| $(maximum(lp.cd)) min|aij| $(minimum(lp.cd))")
         # @show sratio, aratio
         if sratio >= 0.9 * aratio
             break
@@ -218,6 +216,7 @@ function scaling_rows!(lp::MatOI.AbstractLPForm{T}) where T
     lp.A ./= rd
     lp.c_lb ./= rd
     lp.c_ub ./= rd
+    println("Sacling rows: max|aij| $(maximum(rd)) min|aij| $(minimum(rd))")
 end
 
 function normalizing_columns!(lp::MatOI.AbstractLPForm{T}) where T
@@ -275,6 +274,7 @@ function scaling_columns!(lp::MatOI.AbstractLPForm{T}) where T
     lp.c ./= cd
     lp.v_lb .*= cd
     lp.v_ub .*= cd
+    println("Sacling columns: max|aij| $(maximum(cd)) min|aij| $(minimum(cd))")
 end
 
 # function scaling_columns!(lp::StandardLpData{CuArray})

@@ -17,7 +17,7 @@ ncols(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 2)
 
 include("Constant.jl")
 include("GLPK.jl")
-# include("LP.jl")
+include("LP.jl")
 include("PhaseOne/PhaseOne.jl")
 
 mutable struct SpxData{T<:AbstractArray}
@@ -233,7 +233,6 @@ function pivot(spx::SpxData)
     @timeit TO "ratio test" begin
         spx.tl .= (spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]) ./ spx.d
         spx.tu .= (spx.x[spx.basic] .- spx.lpdata.v_ub[spx.basic]) ./ spx.d
-        # nrows = MOI.get(spx.lpdata, MOI.NumberOfConstraints())
         if spx.r[spx.enter_pos] < 0
             best_t = Inf
             for i = 1:nrows(spx.lpdata)
@@ -247,8 +246,8 @@ function pivot(spx::SpxData)
                 end
             end
             if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
-                best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_lb[spx.enter]
-                spx.x[spx.enter] .= spx.lpdata.v_lb[spx.enter]
+                best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
+                spx.x[spx.enter] .= spx.lpdata.v_ub[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_UPPER
                 spx.update = false
             end
@@ -412,11 +411,11 @@ function run(prob::MatOI.AbstractLPForm{T};
         end
 
         # convert the problem into a canonical form
-        # canonical = Simplex.canonical_form(prob)
-        canonical = MatOI.change_form(
-            MatOI.LPSolverForm{T, typeof(prob.A)},
-            presolve_prob,
-        )
+        canonical = Simplex.canonical_form(presolve_prob)
+        # canonical = MatOI.change_form(
+        #     MatOI.LPSolverForm{T, typeof(prob.A)},
+        #     presolve_prob,
+        # )
 
         # print out the summary of problem
         # summary(canonical)

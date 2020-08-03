@@ -12,11 +12,11 @@ const MOI = MatOI.MOI
 
 instances=[
     "afiro",
-    # "adlittle",
-    # "sc50a",
-    # "sc50b",
-    # "sc105",
-    # "sc205"
+    "adlittle",
+    "sc50a",
+    "sc50b",
+    "sc105",
+    "sc205"
 ]
 phaseone_methods = [
     Simplex.PhaseOne.ARTIFICIAL,
@@ -24,8 +24,8 @@ phaseone_methods = [
 ]
 pivot_rules = [
     Simplex.Bland,
-    # Simplex.Steepest,
-    # Simplex.Dantzig,
+    Simplex.Steepest,
+    Simplex.Dantzig,
 ]
 arch_list = [
     # "GPU",
@@ -34,7 +34,6 @@ arch_list = [
 
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
-    # lp = Simplex.StandardLpData(c, xl, xu, A, bl, bu)
     lp =  MatOI.LPForm{Float64, typeof(A)}(
         MOI.MIN_SENSE, c, A, bl, bu, xl, xu
     )
