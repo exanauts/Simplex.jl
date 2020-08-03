@@ -4,7 +4,7 @@ Presolve is a key to accelerate the linear programming solution.
 TODO: Need to check and implement the algorithms in
 Andersen and Andersen. Presolving in linear programming. 1995
 """
-function presolve(lp::MatOI.LPForm{T, AT}) where {T, AT}
+function presolve(lp::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     @timeit TO "row reduction" begin
         tmp_A = lp.A
         to_keep = collect(1:nrows(lp))
@@ -24,7 +24,7 @@ function presolve(lp::MatOI.LPForm{T, AT}) where {T, AT}
 
         # @show size(lp.A)
     end
-    return MatOI.LPForm{T, AT}(
+    return MatOI.LPForm{T, AT, VT}(
         lp.direction,
         lp.c,
         sparse(tmp_A),
@@ -216,7 +216,7 @@ function scaling_rows!(lp::MatOI.AbstractLPForm{T}) where T
     lp.A ./= rd
     lp.c_lb ./= rd
     lp.c_ub ./= rd
-    println("Sacling rows: max|aij| $(maximum(rd)) min|aij| $(minimum(rd))")
+    println("Scaling rows: max|aij| $(maximum(rd)) min|aij| $(minimum(rd))")
 end
 
 function normalizing_columns!(lp::MatOI.AbstractLPForm{T}) where T
@@ -274,7 +274,7 @@ function scaling_columns!(lp::MatOI.AbstractLPForm{T}) where T
     lp.c ./= cd
     lp.v_lb .*= cd
     lp.v_ub .*= cd
-    println("Sacling columns: max|aij| $(maximum(cd)) min|aij| $(minimum(cd))")
+    println("Scaling columns: max|aij| $(maximum(cd)) min|aij| $(minimum(cd))")
 end
 
 # function scaling_columns!(lp::StandardLpData{CuArray})

@@ -121,11 +121,6 @@ Linear programming problem
 #     end
 # end
 
-# cpu2gpu(lp::StandardLpData{Array}) = StandardLpData(lp.c, lp.xl, lp.xu, lp.A, lp.bl, lp.bu, lp.x, CuArray)
-# cpu2gpu(lp::StandardLpData{CuArray}) = lp
-# cpu2gpu(lp::CanonicalLpData{Array}) = CanonicalLpData(lp.c, lp.xl, lp.xu, lp.A, lp.b, lp.x, CuArray)
-# cpu2gpu(lp::CanonicalLpData{CuArray}) = lp
-
 # function rhs(lp::StandardLpData)
 #     @error "This is available for canonical form only."
 # end
@@ -223,10 +218,39 @@ function canonical_form(standard::MatOI.LPForm{T, AT}) where {T, AT}
     # @show standard.TArray
     # canonical = CanonicalLpData(c, xl, xu, A, b, [], standard.TArray)
     senses = fill(MatOI.EQUAL_TO, lp_nrows)
-    canonical = MatOI.LPSolverForm{T, typeof(A)}(
+    canonical = MatOI.LPSolverForm{T, typeof(A), typeof(c)}(
         MOI.MIN_SENSE, c, A, b, senses, xl, xu
     )
 
     return canonical
 end
 canonical_form(standard::MatOI.LPSolverForm) = standard
+
+function cpu2gpu(lp::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
+    if VT <: CuArray
+        return lp
+    end
+    c = convert(CuArray{T, 1}, lp.c)
+    A = convert(CuArray{T, 2}, lp.A)
+    c_lb = convert(CuArray{T, 1}, lp.c_lb)
+    c_ub = convert(CuArray{T, 1}, lp.c_ub)
+    v_lb = convert(CuArray{T, 1}, lp.v_lb)
+    v_ub = convert(CuArray{T, 1}, lp.v_ub)
+
+    return MatOI.LPForm{T, typeof(A), typeof(b)}(
+        lp.direction, c, A, c_lb, c_ub, v_lb, v_ub)
+end
+
+function cpu2gpu(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
+    if VT <: CuArray
+        return lp
+    end
+    c = convert(CuArray{T, 1}, lp.c)
+    A = convert(CuArray{T, 2}, lp.A)
+    b = convert(CuArray{T, 1}, lp.b)
+    v_lb = convert(CuArray{T, 1}, lp.v_lb)
+    v_ub = convert(CuArray{T, 1}, lp.v_ub)
+
+    return MatOI.LPSolverForm{T, typeof(A), typeof(b)}(
+        lp.direction, c, A, b, lp.senses, v_lb, v_ub)
+end
