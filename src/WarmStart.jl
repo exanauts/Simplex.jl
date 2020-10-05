@@ -2,16 +2,16 @@
 
 function set_basis(spx::SpxData, basis::Vector{Int})
     # Set basic and nonbasic indices
-    spx.basis_status = Vector{Int}(undef, spx.lpdata.ncols)
+    spx.basis_status = Vector{Int}(undef, ncols(spx.lpdata))
     spx.basic = basis
     spx.nonbasic = Int[]
-    sizehint!(spx.nonbasic, spx.lpdata.ncols - spx.lpdata.nrows)
-    for j = 1:spx.lpdata.ncols
+    sizehint!(spx.nonbasic, ncols(spx.lpdata) - nrows(spx.lpdata))
+    for j = 1:ncols(spx.lpdata)
         if !in(j, spx.basic)
             push!(spx.nonbasic, j)
-            if spx.lpdata.xl[j] > -Inf
+            if spx.lpdata.v_lb[j] > -Inf
                 spx.basis_status[j] = BASIS_AT_LOWER
-            elseif spx.lpdata.xu[j] < Inf
+            elseif spx.lpdata.v_ub[j] < Inf
                 spx.basis_status[j] = BASIS_AT_UPPER
             else
                 spx.basis_status[j] = BASIS_FREE
@@ -28,9 +28,9 @@ function set_basis_status(spx::SpxData, basis_status::Vector{Int})
     spx.basis_status = basis_status
     spx.basic = Int[]
     spx.nonbasic = Int[]
-    sizehint!(spx.basic, spx.lpdata.nrows)
-    sizehint!(spx.nonbasic, spx.lpdata.ncols - spx.lpdata.nrows)
-    for j = 1:spx.lpdata.ncols
+    sizehint!(spx.basic, nrows(spx.lpdata))
+    sizehint!(spx.nonbasic, ncols(spx.lpdata) - nrows(spx.lpdata))
+    for j = 1:ncols(spx.lpdata)
         if basis_status[j] == BASIS_BASIC
             push!(spx.basic, j)
         else
@@ -45,8 +45,8 @@ function set_basis(spx::SpxData, basis::Vector{Int}, basis_status::Vector{Int})
     spx.basis_status = basis_status
     spx.basic = basis
     spx.nonbasic = Int[]
-    sizehint!(spx.nonbasic, spx.lpdata.ncols - spx.lpdata.nrows)
-    for j = 1:spx.lpdata.ncols
+    sizehint!(spx.nonbasic, ncols(spx.lpdata) - nrows(spx.lpdata))
+    for j = 1:ncols(spx.lpdata)
         if !in(j, spx.basic)
             push!(spx.nonbasic, j)
         end
@@ -55,19 +55,19 @@ function set_basis(spx::SpxData, basis::Vector{Int}, basis_status::Vector{Int})
 end
 
 function set_basis(spx::SpxData{T}, x::T) where T
-    spx.basis_status = Vector{Int}(undef, spx.lpdata.ncols)
+    spx.basis_status = Vector{Int}(undef, ncols(spx.lpdata))
     spx.basic = Int[]
     spx.nonbasic = Int[]
-    sizehint!(spx.basic, spx.lpdata.nrows)
-    sizehint!(spx.nonbasic, spx.lpdata.ncols - spx.lpdata.nrows)
-    for j = 1:spx.lpdata.ncols
-        if x[j] == spx.lpdata.xl[j]
+    sizehint!(spx.basic, nrows(spx.lpdata))
+    sizehint!(spx.nonbasic, ncols(spx.lpdata) - nrows(spx.lpdata))
+    for j = 1:ncols(spx.lpdata)
+        if x[j] == spx.lpdata.v_lb[j]
             spx.basis_status[j] = BASIS_AT_LOWER
             push!(spx.nonbasic, j)
-        elseif x[j] == spx.lpdata.xu[j]
+        elseif x[j] == spx.lpdata.v_ub[j]
             spx.basis_status[j] = BASIS_AT_UPPER
             push!(spx.nonbasic, j)
-        elseif length(spx.basic) < spx.lpdata.nrows
+        elseif length(spx.basic) < nrows(spx.lpdata)
             spx.basis_status[j] = BASIS_BASIC
             push!(spx.basic, j)
         else
@@ -81,9 +81,9 @@ end
 function set_nonbasic(spx::SpxData)
     for j in spx.nonbasic
         if spx.basis_status[j] == BASIS_AT_LOWER
-            spx.x[j] = spx.lpdata.xl[j]
+            spx.x[j] = spx.lpdata.v_lb[j]
         elseif spx.basis_status[j] == BASIS_AT_UPPER
-            spx.x[j] = spx.lpdata.xu[j]
+            spx.x[j] = spx.lpdata.v_ub[j]
         elseif spx.basis_status[j] == BASIS_FREE
             @warn("Free nonbasic variable (x$j) is set to zero.")
             spx.x[j] = 0.0

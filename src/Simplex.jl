@@ -3,10 +3,17 @@ module Simplex
 using SparseArrays
 using LinearAlgebra
 using Statistics
+using MatrixOptInterface
 using TimerOutputs
 using CUDA
 
+const MatOI = MatrixOptInterface
+const MOI = MatOI.MOI
+
 const TO = TimerOutput()
+
+nrows(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 1)
+ncols(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 2)
 
 include("Constant.jl")
 include("GLPK.jl")
@@ -14,7 +21,7 @@ include("LP.jl")
 include("PhaseOne/PhaseOne.jl")
 
 mutable struct SpxData{T<:AbstractArray}
-    lpdata::AbstractLpData{T}
+    lpdata::MatOI.AbstractLPForm
 
     basis_status::Vector{Int}
     basic::Vector{Int}
@@ -64,7 +71,7 @@ mutable struct SpxData{T<:AbstractArray}
     # start index of the artificial variables
     start_artvars::Int
 
-    function SpxData(lpdata::AbstractLpData{T}) where T
+    function SpxData(lpdata::MatOI.AbstractLPForm{S}, T::Type) where S
         spx = new{T}()
         spx.lpdata = lpdata
 
@@ -73,34 +80,34 @@ mutable struct SpxData{T<:AbstractArray}
             error("Unkown array type $(T).")
         end
 
-        # spx.view_basic_A = TArray{T,2}(undef, lpdata.nrows, lpdata.nrows)
-        # spx.view_nonbasic_A = T{Float64,2}(undef, lpdata.nrows, lpdata.ncols - lpdata.nrows)
-        # spx.view_basic_x = T{Float64}(undef, lpdata.nrows)
-        # spx.view_nonbasic_x = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        # spx.view_basic_xl = T{Float64}(undef, lpdata.nrows)
-        # spx.view_nonbasic_xl = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        # spx.view_basic_xu = T{Float64}(undef, lpdata.nrows)
-        # spx.view_nonbasic_xu = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        # spx.view_basic_c = T{Float64}(undef, lpdata.nrows)
-        # spx.view_nonbasic_c = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
+        # spx.view_basic_A = TArray{T,2}(undef, nrows(lpdata), nrows(lpdata))
+        # spx.view_nonbasic_A = T{Float64,2}(undef, nrows(lpdata), ncols(lpdata) - nrows(lpdata))
+        # spx.view_basic_x = T{Float64}(undef, nrows(lpdata))
+        # spx.view_nonbasic_x = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        # spx.view_basic_xl = T{Float64}(undef, nrows(lpdata))
+        # spx.view_nonbasic_xl = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        # spx.view_basic_xu = T{Float64}(undef, nrows(lpdata))
+        # spx.view_nonbasic_xu = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        # spx.view_basic_c = T{Float64}(undef, nrows(lpdata))
+        # spx.view_nonbasic_c = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
 
         # DENSE MATRICES
-        spx.matI = T{Float64,2}(Matrix(I,lpdata.nrows,lpdata.nrows))
-        spx.matQ = T{Float64,2}(undef, lpdata.nrows, lpdata.nrows)
-        spx.invB = T{Float64,2}(undef, lpdata.nrows, lpdata.nrows)
+        spx.matI = T{Float64,2}(Matrix(I,nrows(lpdata),nrows(lpdata)))
+        spx.matQ = T{Float64,2}(undef, nrows(lpdata), nrows(lpdata))
+        spx.invB = T{Float64,2}(undef, nrows(lpdata), nrows(lpdata))
 
-        spx.x = T{Float64}(undef, lpdata.ncols)
-        spx.pB = T{Float64}(undef, lpdata.nrows)
-        spx.r = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        spx.d = T{Float64}(undef, lpdata.nrows)
-        spx.tl = T{Float64}(undef, lpdata.nrows)
-        spx.tu = T{Float64}(undef, lpdata.nrows)
+        spx.x = T{Float64}(undef, ncols(lpdata))
+        spx.pB = T{Float64}(undef, nrows(lpdata))
+        spx.r = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        spx.d = T{Float64}(undef, nrows(lpdata))
+        spx.tl = T{Float64}(undef, nrows(lpdata))
+        spx.tu = T{Float64}(undef, nrows(lpdata))
 
         # Steepest-edge pivot only
-        spx.gamma = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        spx.v = T{Float64}(undef, lpdata.nrows)
-        spx.s = T{Float64}(undef, lpdata.ncols - lpdata.nrows)
-        spx.g = T{Float64}(undef, lpdata.nrows)
+        spx.gamma = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        spx.v = T{Float64}(undef, nrows(lpdata))
+        spx.s = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
+        spx.g = T{Float64}(undef, nrows(lpdata))
 
         fill!(spx.matQ, 0)
         fill!(spx.x, 0)
@@ -117,7 +124,7 @@ mutable struct SpxData{T<:AbstractArray}
 end
 
 objective(spx::SpxData) = (spx.lpdata.c' * spx.x)
-rhs(spx::SpxData) = rhs(spx.lpdata)
+rhs(spx::SpxData) = spx.lpdata.b
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
@@ -224,11 +231,11 @@ function pivot(spx::SpxData)
 
     # ratio test
     @timeit TO "ratio test" begin
-        spx.tl .= (spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]) ./ spx.d
-        spx.tu .= (spx.x[spx.basic] .- spx.lpdata.xu[spx.basic]) ./ spx.d
+        spx.tl .= (spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]) ./ spx.d
+        spx.tu .= (spx.x[spx.basic] .- spx.lpdata.v_ub[spx.basic]) ./ spx.d
         if spx.r[spx.enter_pos] < 0
             best_t = Inf
-            for i = 1:spx.lpdata.nrows
+            for i = 1:nrows(spx.lpdata)
                 if spx.d[i] < -EPS && best_t > spx.tu[i]
                     best_t = spx.tu[i]
                     spx.leave = i
@@ -238,15 +245,15 @@ function pivot(spx::SpxData)
                     spx.leave = i
                 end
             end
-            if best_t > spx.lpdata.xu[spx.enter] - spx.x[spx.enter] && best_t < Inf
-                best_t = spx.lpdata.xu[spx.enter] - spx.lpdata.xl[spx.enter]
-                spx.x[spx.enter] .= spx.lpdata.xu[spx.enter]
+            if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
+                best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
+                spx.x[spx.enter] .= spx.lpdata.v_ub[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_UPPER
                 spx.update = false
             end
         elseif spx.r[spx.enter_pos] > 0
             best_t = -Inf
-            for i = 1:spx.lpdata.nrows
+            for i = 1:nrows(spx.lpdata)
                 if spx.d[i] < -EPS && best_t < spx.tl[i]
                     best_t = spx.tl[i]
                     spx.leave = i
@@ -259,9 +266,9 @@ function pivot(spx::SpxData)
                 #     spx.tu[i] = -Inf
                 # end
             end
-            if best_t < spx.lpdata.xl[spx.enter] - spx.x[spx.enter] && best_t > -Inf
-                best_t = spx.lpdata.xl[spx.enter] - spx.lpdata.xu[spx.enter]
-                spx.x[spx.enter] .= spx.lpdata.xl[spx.enter]
+            if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
+                best_t = spx.lpdata.xl[spx.enter] - spx.lpdata.v_ub[spx.enter]
+                spx.x[spx.enter] .= spx.lpdata.v_lb[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_LOWER
                 spx.update = false
             end
@@ -288,13 +295,13 @@ function pivot(spx::SpxData)
     spx.x[spx.basic] .-= best_t * spx.d
     # spx.view_basic_x .-= best_t * spx.d
     # @show spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]]
-    @assert spx.x[spx.basic[spx.leave]] >= spx.lpdata.xl[spx.basic[spx.leave]] - 1e-8
-    @assert spx.x[spx.basic[spx.leave]] <= spx.lpdata.xu[spx.basic[spx.leave]] + 1e-8
+    @assert spx.x[spx.basic[spx.leave]] >= spx.lpdata.v_lb[spx.basic[spx.leave]] - 1e-8
+    @assert spx.x[spx.basic[spx.leave]] <= spx.lpdata.v_ub[spx.basic[spx.leave]] + 1e-8
     if spx.update
         spx.x[spx.enter] += best_t
         # @show spx.x[spx.enter], spx.lpdata.xl[spx.enter], spx.lpdata.xu[spx.enter]
-        @assert spx.x[spx.enter] >= spx.lpdata.xl[spx.enter] - 1e-8
-        @assert spx.x[spx.enter] <= spx.lpdata.xu[spx.enter] + 1e-8
+        @assert spx.x[spx.enter] >= spx.lpdata.v_lb[spx.enter] - 1e-8
+        @assert spx.x[spx.enter] <= spx.lpdata.v_ub[spx.enter] + 1e-8
     end
 end
 
@@ -316,12 +323,12 @@ function update_basis(spx::SpxData)
 
     # update basis status
     @timeit TO "update basis" begin
-        if isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], atol=1e-6)
+        if isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], atol=1e-6)
             spx.basis_status[spx.basic[spx.leave]] = BASIS_AT_LOWER
-            spx.x[spx.basic[spx.leave]] = spx.lpdata.xl[spx.basic[spx.leave]]
-        elseif isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]], atol=1e-6)
+            spx.x[spx.basic[spx.leave]] = spx.lpdata.v_lb[spx.basic[spx.leave]]
+        elseif isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]], atol=1e-6)
             spx.basis_status[spx.basic[spx.leave]] = BASIS_AT_UPPER
-            spx.x[spx.basic[spx.leave]] = spx.lpdata.xu[spx.basic[spx.leave]]
+            spx.x[spx.basic[spx.leave]] = spx.lpdata.v_ub[spx.basic[spx.leave]]
         else
             spx.basis_status[spx.basic[spx.leave]] = BASIS_FREE
         end
@@ -384,56 +391,59 @@ function iterate(spx::SpxData)
     end
 end
 
-function run(prob::StandardLpData; 
+function run(prob::MatOI.AbstractLPForm{T};
     basis::Vector{Int} = Int[],
     pivot_rule::PivotRule = Dantzig,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
     gpu = false,
-    performance_io::IO = stdout)
+    performance_io::IO = stdout) where T
 
     reset_timer!(TO)
+    status = NotSolved
 
     @timeit TO "run" begin
         @timeit TO "presolve" begin
-            presolve(prob)
+            presolve_prob = presolve(prob)
         end
 
         @timeit TO "scaling" begin
-            scaling!(prob)
+            scaling!(presolve_prob)
         end
 
         # convert the problem into a canonical form
-        canonical = Simplex.canonical_form(prob)
+        canonical = Simplex.canonical_form(presolve_prob)
 
         # print out the summary of problem
         # summary(canonical)
 
         # Use GPU?
         processed_prob = gpu ? Simplex.cpu2gpu(canonical) : canonical
+        TT = gpu ? CuArray : Array
 
         @timeit TO "run core" begin
             # load the problem
-            spx = SpxData(processed_prob)
+            spx = SpxData(processed_prob, TT)
             spx.pivot_rule = pivot_rule
+            x = copy(spx.x)
             # summary(canonical)
 
             if length(basis) == 0
                 println("Phase 1:")
                 @timeit TO "Phase 1" begin
-                    basis_status = PhaseOne.run(processed_prob,
+                    status, basis_status = PhaseOne.run(processed_prob, x,
                         method = phase_one_method,
                         original_lp = prob,
                         pivot_rule = pivot_rule)
                 end
-                println("Phase 1 is done: status $(Symbol(processed_prob.status))")
+                println("Phase 1 is done: status $(Symbol(status))")
 
-                if processed_prob.status == Feasible
+                if status == Feasible
                     set_basis_status(spx, basis_status)
                     # @show length(spx.basic), length(spx.nonbasic)
                     # @show spx.basis_status
                 else
                     show(TO)
-                    return
+                    return status
                 end
             else
                 println("Basis information is provided.")
@@ -444,7 +454,7 @@ function run(prob::StandardLpData;
                 run_core(spx)
             end
 
-            prob.status = spx.status
+            status = spx.status
             println("Phase 2 is done: status $(Symbol(spx.status))")
             println(performance_io, "Final objective value: $(objective(spx))")
         end # run core
@@ -453,6 +463,7 @@ function run(prob::StandardLpData;
 
     show(performance_io, TO)
     println(performance_io, "")
+    return status
 end
 
 function run_core(spx::SpxData)
@@ -479,6 +490,6 @@ end
 include("Presolve.jl")
 include("PivotRules.jl")
 include("WarmStart.jl")
-include("utils.jl")
+# include("utils.jl")
 
 end # module

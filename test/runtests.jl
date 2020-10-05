@@ -2,8 +2,11 @@ using Simplex
 using CUDA
 using SparseArrays
 using LinearAlgebra
+using MatrixOptInterface
 using Test
 
+const MatOI = MatrixOptInterface
+const MOI = MatOI.MOI
 # CUDA.allowscalar(false)
 
 instances=[
@@ -30,12 +33,14 @@ arch_list = [
 
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
-    lp = Simplex.StandardLpData(c, xl, xu, A, bl, bu)
-    Simplex.run(lp, 
+    lp =  MatOI.LPForm{Float64, typeof(A), typeof(c)}(
+        MOI.MIN_SENSE, c, A, bl, bu, xl, xu
+    )
+    status = Simplex.run(lp,
         gpu = use_gpu,
         phase_one_method = method,
         pivot_rule = pivot)
-    return lp.status
+    return status
 end
 
 @testset "netlib instances" begin
@@ -49,7 +54,7 @@ end
                         @testset "$(Symbol(method))" begin
                             for pivot in pivot_rules
                                 @testset "$(Symbol(pivot))" begin
-                                    netlib = "../netlib/$i.mps"
+                                    netlib = "netlib/$i.mps"
                                     @test Simplex.Optimal == run_netlib_instance(netlib, use_gpu, method, pivot)
                                 end
                             end

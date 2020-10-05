@@ -1,14 +1,20 @@
 module Artificial
 
 using CUDA
+using LinearAlgebra
+using MatrixOptInterface
 using SparseArrays
 
 import ..PhaseOne
 import Simplex
+import Simplex: nrows, ncols
+
+const MatOI = MatrixOptInterface
+const MOI = MatOI.MOI
 
 """
     This creates a reformulation to begin with all artificial basis.
-    This is the simplest way to constrcut the initial basis.
+    This is the simplest way to construct the initial basis.
 
     The canonical form
 
@@ -36,25 +42,24 @@ import Simplex
             xN[j] = 0.0
         end
 """
-function reformulate(lp::Simplex.CanonicalLpData)
-    nrows = lp.nrows
-    ncols = lp.ncols + nrows
+function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
+    lp_nrows = nrows(lp)
+    lp_ncols = ncols(lp) + lp_nrows
 
     # objective coefficient
-    c = append!(zeros(lp.ncols), ones(nrows))
+    c = append!(zeros(ncols(lp)), ones(lp_nrows))
+    c = VT(c)
 
     # column bounds
-    xl = append!(deepcopy(Array(lp.xl)), zeros(nrows))
-    xu = append!(deepcopy(Array(lp.xu)), ones(nrows)*Inf)
+    # TODO: build thing directly on GPU
+    xl = append!(deepcopy(Array(lp.v_lb)), zeros(lp_nrows))
+    xu = append!(deepcopy(Array(lp.v_ub)), ones(lp_nrows)*Inf)
+    xl = VT(xl)
+    xu = VT(xu)
 
-    # cpu memory
-    if lp.TArray == Array
-        x = lp.x
-    elseif lp.TArray == CUDA.CuArray
-        x = Array{Float64}(undef, lp.ncols)
-    end
+    x = VT(undef, ncols(lp))
 
-    for j = 1:lp.ncols
+    for j = 1:ncols(lp)
         if xl[j] > -Inf
             x[j] = xl[j]
         elseif xu[j] < Inf
@@ -64,36 +69,40 @@ function reformulate(lp::Simplex.CanonicalLpData)
         end
     end
 
-    # copy
-    if lp.TArray == Array
-        lp.x = x
-    elseif lp.TArray == CuArray
-        copyto!(lp.x, x)
-    end
-
     # rhs
-    b = Array{Float64}(undef, lp.nrows)
-    copyto!(b, lp.b .- lp.A * lp.x)
+    b = VT(undef, nrows(lp))
+    copyto!(b, lp.b .- lp.A * x)
 
     # create the submatrix for slack
-    I = collect(1:nrows)
-    V = Array{Float64}(undef, nrows)
-    for i = 1:nrows
+    I = collect(1:lp_nrows)
+    V = VT(undef, lp_nrows)
+    for i = 1:lp_nrows
         if b[i] < 0
             V[i] = -1
         else
             V[i] = 1
         end
     end
-    S = sparse(I, I, V)
 
-    # create the matrix in canonical form
-    A = [sparse(Matrix(lp.A)) S]
+    if VT <: Array
+        S = sparse(I, I, V)
+        # create the matrix in canonical form
+        A = [sparse(Matrix(lp.A)) S]
+    elseif VT <: CuArray
+        # on GPU
+        A = [lp.A diagm(V)]
+    else
+        error("Not supported vector type $(VT)")
+    end
 
-    return Simplex.CanonicalLpData(c, xl, xu, A, Array(lp.b), Array(lp.x), lp.TArray)
+    senses = fill(MatOI.EQUAL_TO, nrows(lp))
+    return MatOI.LPSolverForm{T, typeof(A), typeof(c)}(
+        MOI.MIN_SENSE,
+        c, A, lp.b, senses, xl, xu
+    )
 end
 
-function run(prob::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
+function run(prob::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
 
     if !haskey(kwargs, :pivot_rule)
         @error "Argument :pivot_rule is not provided."
@@ -104,23 +113,25 @@ function run(prob::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     p1lp = reformulate(prob)
 
     # load the problem
-    spx = Simplex.SpxData(p1lp)
+    # TODO: quick hack before curating type in SpxData
+    T = (typeof(x) <: CuArray) ? CuArray : Array
+    spx = Simplex.SpxData(p1lp, T)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
-    basic = collect((p1lp.ncols-p1lp.nrows+1):p1lp.ncols)
+    basic = collect((ncols(p1lp)-nrows(p1lp)+1):ncols(p1lp))
     Simplex.set_basis(spx, basic)
 
     # Run simplex method
     Simplex.run_core(spx)
 
     # Basis should not contain artificial variables.
-    # if in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
-    #     spx.start_artvars = prob.ncols+1
+    # if in(BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end])
+    #     spx.start_artvars = ncols(prob)+1
     #     spx.pivot_rule = Artificial
     #     spx.status = Solve
     # end
-    # # while in(BASIS_BASIC, spx.basis_status[(prob.ncols+1):end]) && spx.iter <= prob.nrows
+    # # while in(BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end]) && spx.iter <= prob.nrows
     # while spx.status == Solve && spx.iter < prob.nrows
     #     iterate(spx)
     #     println("Iteration $(spx.iter): removed artificial variable $(spx.nonbasic[spx.enter_pos]) from basis (entering variable $(spx.enter))")
@@ -128,20 +139,20 @@ function run(prob::Simplex.CanonicalLpData; kwargs...)::Vector{Int}
     # spx.pivot_rule = pivot_rule
 
     if Simplex.objective(spx) > 1e-6
-        prob.status = Simplex.Infeasible
+        status = Simplex.Infeasible
         @warn("Infeasible.")
     else
-        if in(Simplex.BASIS_BASIC, spx.basis_status[(prob.ncols+1):end])
+        if in(Simplex.BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end])
             @warn("Could not remove artificial variables from basis... :(")
-            prob.status = Simplex.Infeasible
+            status = Simplex.Infeasible
         else
-            prob.status = Simplex.Feasible
-            prob.x .= spx.x[1:prob.ncols]
+            status = Simplex.Feasible
+            x .= spx.x[1:ncols(prob)]
         end
     end
     # @show prob.status
     # @show prob.x
-    return spx.basis_status[1:prob.ncols]
+    return status, spx.basis_status[1:ncols(prob)]
 end
 
 end # module
