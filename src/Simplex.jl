@@ -413,40 +413,41 @@ function run(prob::MatOI.AbstractLPForm{T};
         # convert the problem into a canonical form
         canonical = Simplex.canonical_form(presolve_prob)
 
-        # print out the summary of problem
-        # summary(canonical)
-
         # Use GPU?
         processed_prob = gpu ? Simplex.cpu2gpu(canonical) : canonical
         TT = gpu ? CuArray : Array
 
         @timeit TO "run core" begin
-            # load the problem
-            spx = SpxData(processed_prob, TT)
-            spx.pivot_rule = pivot_rule
-            x = copy(spx.x)
-            # summary(canonical)
 
             if length(basis) == 0
                 println("Phase 1:")
+
+                # Mark the original objective function 
+                original_objective = deepcopy(processed_prob.c)
+
                 @timeit TO "Phase 1" begin
-                    status, basis_status = PhaseOne.run(processed_prob, x,
+                    spx = PhaseOne.run(processed_prob, TT,
                         method = phase_one_method,
-                        original_lp = prob,
+                        original_lp = presolve_prob,
                         pivot_rule = pivot_rule)
                 end
-                println("Phase 1 is done: status $(Symbol(status))")
 
-                if status == Feasible
-                    set_basis_status(spx, basis_status)
-                    # @show length(spx.basic), length(spx.nonbasic)
-                    # @show spx.basis_status
-                else
+                status = objective(spx) > 1.e-6 ? Infeasible : Feasible
+                println("Phase 1 is done: status $(Symbol(status))")
+                if status == Infeasible
                     show(TO)
                     return status
                 end
+
+                # Replace back to the original objective function
+                spx.lpdata.c .= [original_objective; zeros(length(spx.lpdata.c)-length(original_objective))]
+
+                # reset the status
+                spx.status = Solve
             else
                 println("Basis information is provided.")
+                spx = SpxData(processed_prob, TT)
+                spx.pivot_rule = pivot_rule
                 set_basis(spx, basis)
             end
 

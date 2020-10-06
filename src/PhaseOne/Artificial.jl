@@ -102,7 +102,7 @@ function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}) where {T, AT, VT}
     )
 end
 
-function run(prob::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
+function run(prob::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
 
     if !haskey(kwargs, :pivot_rule)
         @error "Argument :pivot_rule is not provided."
@@ -113,9 +113,7 @@ function run(prob::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
     p1lp = reformulate(prob)
 
     # load the problem
-    # TODO: quick hack before curating type in SpxData
-    T = (typeof(x) <: CuArray) ? CuArray : Array
-    spx = Simplex.SpxData(p1lp, T)
+    spx = Simplex.SpxData(p1lp, Tv)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
@@ -124,35 +122,8 @@ function run(prob::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
 
     # Run simplex method
     Simplex.run_core(spx)
-
-    # Basis should not contain artificial variables.
-    # if in(BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end])
-    #     spx.start_artvars = ncols(prob)+1
-    #     spx.pivot_rule = Artificial
-    #     spx.status = Solve
-    # end
-    # # while in(BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end]) && spx.iter <= prob.nrows
-    # while spx.status == Solve && spx.iter < prob.nrows
-    #     iterate(spx)
-    #     println("Iteration $(spx.iter): removed artificial variable $(spx.nonbasic[spx.enter_pos]) from basis (entering variable $(spx.enter))")
-    # end
-    # spx.pivot_rule = pivot_rule
-
-    if Simplex.objective(spx) > 1e-6
-        status = Simplex.Infeasible
-        @warn("Infeasible.")
-    else
-        if in(Simplex.BASIS_BASIC, spx.basis_status[(ncols(prob)+1):end])
-            @warn("Could not remove artificial variables from basis... :(")
-            status = Simplex.Infeasible
-        else
-            status = Simplex.Feasible
-            x .= spx.x[1:ncols(prob)]
-        end
-    end
-    # @show prob.status
-    # @show prob.x
-    return status, spx.basis_status[1:ncols(prob)]
+    
+    return spx
 end
 
 end # module
