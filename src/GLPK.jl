@@ -30,9 +30,9 @@ function GLPK_read_mps(mpsfile::String)
     nrow::Int = GLPK.glp_get_num_rows(lp)
     ncol::Int = GLPK.glp_get_num_cols(lp)
     nnz::Int = GLPK.glp_get_num_nz(lp);
-    @show nrow
-    @show ncol
-    @show nnz
+    # @show nrow
+    # @show ncol
+    # @show nnz
     
     index1 = Array{Int32,1}(undef, nrow)
     coef1 = Array{Float64,1}(undef, nrow)
@@ -45,9 +45,9 @@ function GLPK_read_mps(mpsfile::String)
 
     for i in 1:ncol
         c[i] = GLPK.glp_get_obj_coef(lp,i)
-        @show i, c[i]
+        # @show i, c[i]
         t = GLPK.glp_get_col_type(lp,i)
-        @show t
+        # @show t
         if t == GLPK.GLP_FR
             xlb[i] = typemin(Float64)
             xub[i] = typemax(Float64)
