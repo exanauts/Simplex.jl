@@ -77,31 +77,4 @@
           cpu = nothing
           gpu = nothing
      end
-
-     @testset "permute rows" begin
-          """
-          Permuted LP:
-
-          min  -10 x1 - 12 x2 - 12 x3
-          s.t.        2 x1 +   x2 + 2 x3 <= 20
-               -20 <= - x1 - 2 x2 - 2 x3
-                10 <= 2 x1 + 2 x2 +   x3 <= 20
-               -10 <= - x1 -   x2
-               x1, x2 >= 0
-               -1 <= x3 <= 10
-          """
-          permlp = Simplex.LpData(c, xl, xu, A, bl, bu)
-          Simplex.permute_rows(permlp)
-          @test permlp.nrows == 4
-          @test permlp.ncols == 3
-          @test permlp.A == A[permlp.row_perm,:]
-          @test permlp.bl == bl[permlp.row_perm]
-          @test permlp.bu == bu[permlp.row_perm]
-          @test permlp.c == c
-          @test permlp.xl == xl
-          @test permlp.xu == xu
-          @test permlp.row_perm == [2, 1, 3, 4]
-
-          permlp = nothing
-     end
 end
