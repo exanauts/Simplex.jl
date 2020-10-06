@@ -9,6 +9,7 @@ const EPS = 1e-6
 
 const MAX_ITER = 30000000000
 const MAX_HISTORY = 100
+const PRINT_ITER_FREQ = 10
 
 @enum(
     Status,

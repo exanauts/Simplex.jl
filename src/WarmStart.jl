@@ -9,9 +9,11 @@ function set_basis(spx::SpxData, basis::Vector{Int})
     for j = 1:ncols(spx.lpdata)
         if !in(j, spx.basic)
             push!(spx.nonbasic, j)
-            if spx.lpdata.v_lb[j] > -Inf
+            axl = abs(spx.lpdata.v_lb[j])
+            axu = abs(spx.lpdata.v_ub[j])
+            if spx.lpdata.v_lb[j] > -Inf && axl <= axu
                 spx.basis_status[j] = BASIS_AT_LOWER
-            elseif spx.lpdata.v_ub[j] < Inf
+            elseif spx.lpdata.v_ub[j] < Inf && axl > axu
                 spx.basis_status[j] = BASIS_AT_UPPER
             else
                 spx.basis_status[j] = BASIS_FREE
@@ -85,7 +87,7 @@ function set_nonbasic(spx::SpxData)
         elseif spx.basis_status[j] == BASIS_AT_UPPER
             spx.x[j] = spx.lpdata.v_ub[j]
         elseif spx.basis_status[j] == BASIS_FREE
-            @warn("Free nonbasic variable (x$j) is set to zero.")
+            # @warn("Free nonbasic variable (x$j) is set to zero.")
             spx.x[j] = 0.0
         end
     end

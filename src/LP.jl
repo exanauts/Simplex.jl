@@ -1,4 +1,3 @@
-
 """
 Given the original LP of the form
     min cx

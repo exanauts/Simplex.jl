@@ -165,6 +165,10 @@ function compute_xB(spx::SpxData)
             # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
             spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         end
+        @show spx.basic
+        @show spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]
+        @assert spx.x[spx.basic] >= spx.lpdata.xl[spx.basic]
+        @assert spx.x[spx.basic] <= spx.lpdata.xu[spx.basic]
     end
 end
 
@@ -221,7 +225,6 @@ function pivot(spx::SpxData)
 
     # compute the direction
     compute_direction(spx)
-    # @show spx.d
     # @show norm(spx.d)
 
     # Terminate with unboundedness
@@ -286,11 +289,9 @@ function pivot(spx::SpxData)
         #     return
         # end
         # @assert abs(spx.d[spx.leave]) >= 1e-8
-        # @show best_t, spx.d[spx.leave]
     end
 
     # update solution
-    # @show best_t, spx.d[spx.leave]
     # @show spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]]
     spx.x[spx.basic] .-= best_t * spx.d
     # spx.view_basic_x .-= best_t * spx.d
@@ -349,7 +350,7 @@ end
 
 function iterate(spx::SpxData)
     @timeit TO "One iteration" begin
-        if spx.iter % 10 == 0 && spx.pivot_rule != Artificial
+        if spx.iter % PRINT_ITER_FREQ == 0 && spx.pivot_rule != Artificial
             println("Iteration $(spx.iter): objective $(objective(spx))")
         end
 
@@ -402,6 +403,7 @@ function run(prob::MatOI.AbstractLPForm{T};
     status = NotSolved
 
     @timeit TO "run" begin
+
         @timeit TO "presolve" begin
             presolve_prob = presolve(prob)
         end
