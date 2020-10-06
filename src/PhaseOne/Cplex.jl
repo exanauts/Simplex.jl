@@ -38,7 +38,7 @@ import Simplex: nrows, ncols
 const MatOI = MatrixOptInterface
 const MOI = MatOI.MOI
 
-function run(lp::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
+function run(lp::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
 
     if !haskey(kwargs, :original_lp)
         @error "Argument :original_lp is not provided."
@@ -166,11 +166,14 @@ function run(lp::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
     # @show length(B), nrows(original_lp), B
     @assert length(B) == nrows(original_lp)
 
+    @show size(original_lp)
+    @show size(lp)
+
     # convert to phase-one form
     p1lp = Artificial.reformulate(lp)
 
     # load the problem
-    spx = Simplex.SpxData(p1lp, Array)
+    spx = Simplex.SpxData(p1lp, Tv)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
@@ -179,20 +182,7 @@ function run(lp::MatOI.LPSolverForm, x::AbstractArray; kwargs...)
     # Run simplex method
     Simplex.run_core(spx)
 
-    if Simplex.objective(spx) > 1e-6
-        status = Simplex.Infeasible
-        @warn("Infeasible.")
-    else
-        if in(Simplex.BASIS_BASIC, spx.basis_status[(lp.ncols+1):end])
-            @warn("Could not remove artificial variables from basis... :(")
-            status = Simplex.Infeasible
-        else
-            status = Simplex.Feasible
-            x .= spx.x[1:lp.ncols]
-        end
-    end
-
-    return status, spx.basis_status[1:lp.ncols]
+    return spx
 end
 
 end
