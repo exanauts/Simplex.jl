@@ -11,19 +11,19 @@ const MOI = MatOI.MOI
 
 instances=[
     "afiro",
-    "adlittle",
-    "sc50a",
-    "sc50b",
-    "sc105",
-    "sc205"
+    # "adlittle",
+    # "sc50a",
+    # "sc50b",
+    # "sc105",
+    # "sc205"
 ]
 phaseone_methods = [
-    Simplex.PhaseOne.ARTIFICIAL,
-    # Simplex.PhaseOne.CPLEX,
+    # Simplex.PhaseOne.ARTIFICIAL,
+    Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
-    Simplex.Bland,
-    Simplex.Steepest,
+    # Simplex.Bland,
+    # Simplex.Steepest,
     Simplex.Dantzig,
 ]
 arch_list = [
@@ -54,7 +54,7 @@ end
                         @testset "$(Symbol(method))" begin
                             for pivot in pivot_rules
                                 @testset "$(Symbol(pivot))" begin
-                                    netlib = "netlib/$i.mps"
+                                    netlib = "../netlib/$i.mps"
                                     @test Simplex.Optimal == run_netlib_instance(netlib, use_gpu, method, pivot)
                                 end
                             end
