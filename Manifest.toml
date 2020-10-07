@@ -189,7 +189,7 @@ version = "0.9.17"
 deps = ["LinearAlgebra", "MathOptInterface", "SparseArrays", "Test"]
 git-tree-sha1 = "8c9ba6232f1359f43f5b056a7e7f40a4cc6ff816"
 repo-rev = "master"
-repo-url = "git@github.com:jump-dev/MatrixOptInterface.jl.git"
+repo-url = "https://github.com/jump-dev/MatrixOptInterface.jl.git"
 uuid = "2f4eb8e6-3e35-4ae4-8c7a-f3d7d9bf20ed"
 version = "0.1.0"
 
