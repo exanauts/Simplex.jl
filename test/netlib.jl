@@ -2,34 +2,36 @@
 instances=[
     "afiro", 
     "adlittle",
-    # "sc50a",
-    # "sc50b",
-    # "sc105",
-    # "sc205"
+    "sc50a",
+    "sc50b",
+    "sc105",
+    "sc205"
 ]
 truefalse = [
     # true,
     false,
 ]
 phaseone_methods = [
-    # Simplex.PhaseOne.ARTIFICIAL, 
+    Simplex.PhaseOne.ARTIFICIAL, 
     Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
-    # Simplex.Bland,
-    # Simplex.Steepest,
+    Simplex.Bland,
+    Simplex.Steepest,
     Simplex.Dantzig,
 ]
 
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
-    lp = Simplex.LpData(c, xl, xu, A, bl, bu)
+    lp =  MatOI.LPForm{Float64, typeof(A), typeof(c)}(
+        MOI.MIN_SENSE, c, A, bl, bu, xl, xu
+    )
     Simplex.summary(lp)
-    Simplex.run(lp, 
+    status = Simplex.run(lp, 
         gpu = use_gpu,
         phase_one_method = method,
         pivot_rule = pivot)
-    return lp.status
+    return status
 end
 
 @testset "netlib instances" begin

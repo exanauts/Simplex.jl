@@ -59,7 +59,7 @@ import Simplex: nrows, ncols
                 0 <= x6 <= 5
                 
         """
-        p1lp = Simplex.PhaseOne.Artificial.reformulate(canonical, basis = B)
+        p1lp, artif_col_idx = Simplex.PhaseOne.Artificial.reformulate(canonical, basis = B)
         @test p1lp.A == canonical.A
         @test p1lp.v_lb == canonical.v_lb
         @test p1lp.v_ub == canonical.v_ub
@@ -86,7 +86,7 @@ import Simplex: nrows, ncols
                 c5:                                      x6 + x8 - x9 == 0
                         x8..x9 >= 0
         """
-        cpxlp, newB = Simplex.PhaseOne.Cplex.reformulate(p1lp, x, num_xvars, num_artif, B)
+        cpxlp, newB, artif_col_idx = Simplex.PhaseOne.Cplex.reformulate(p1lp, x, num_xvars, num_artif, B)
         @test cpxlp.A == sparse(
             [-0.5 -1.0 -1.0 -1.0 0.0  0.0  0.0 0.0  0.0; 
               1.0  0.5  1.0  0.0 1.0  0.0  0.0 0.0  0.0; 
@@ -94,8 +94,8 @@ import Simplex: nrows, ncols
              -1.0 -1.0  0.0  0.0 0.0  0.0 -1.0 0.0  0.0;
               0.0  0.0  0.0  0.0 0.0  1.0  0.0 1.0 -1.0])
         @test cpxlp.b ≈ Float64[-10,10,5,-10,0]
-        @test cpxlp.v_lb ≈ [fill(-Inf,7); zeros(2)]
-        @test cpxlp.v_ub ≈ fill(Inf,9)
+        @test cpxlp.v_lb ≈ [0.0, 0.0, -0.9999999999999999, 0.0, 0.0, -Inf, 0.0, 0.0, 0.0]
+        @test cpxlp.v_ub ≈ [Inf, Inf, 9.999999999999998, Inf, Inf, 4.999999999999999, Inf, Inf, Inf]
         @test cpxlp.c == [zeros(7); 1.; 0.]
         @test newB == [4,5,6,7,8]
     end

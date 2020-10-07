@@ -36,7 +36,7 @@ import Simplex: nrows, ncols
             -1 <= x3 <= 10
             0 <= x6 <= 10
         """
-        p1 = Simplex.PhaseOne.Artificial.reformulate(lp)
+        p1, artif_col_idx = Simplex.PhaseOne.Artificial.reformulate(lp)
         @test nrows(p1) == 4
         @test ncols(p1) == 11
         @test p1.A == sparse(

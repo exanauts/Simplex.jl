@@ -9,7 +9,6 @@ const MatOI = MatrixOptInterface
 const MOI = MatOI.MOI
 # CUDA.allowscalar(false)
 
-# include("LP.jl")
-# include("PhaseOne/Artificial.jl")
+include("PhaseOne/Artificial.jl")
 include("PhaseOne/Cplex.jl")
 include("netlib.jl")
