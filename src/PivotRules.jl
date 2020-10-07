@@ -1,3 +1,4 @@
+
 # Bland's rule
 function pivot_Bland(spx::SpxData)
     spx.enter = -1
@@ -10,7 +11,7 @@ function pivot_Bland(spx::SpxData)
     min_enter = ncols(spx.lpdata) + 1
     for j = 1:length(spx.r)
         if spx.nonbasic[j] < min_enter
-            if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER
+            if spx.basis_status[spx.nonbasic[j]] == Basis_At_Upper
                 if spx.r[j] > 1e-10
                     spx.enter = spx.nonbasic[j]
                     spx.enter_pos = j
@@ -53,11 +54,11 @@ function pivot_steepest_edge(spx::SpxData)
     max_s = 0.0
     for j = 1:length(spx.r)
         if spx.s[j] > max_s
-            if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER && sign(spx.r[j]) > 0
+            if spx.basis_status[spx.nonbasic[j]] == Basis_At_Upper && sign(spx.r[j]) > 0
                 spx.enter = spx.nonbasic[j]
                 spx.enter_pos = j
                 max_s = spx.s[j]
-            elseif spx.basis_status[spx.nonbasic[j]] == BASIS_AT_LOWER && sign(spx.r[j]) < 0
+            elseif spx.basis_status[spx.nonbasic[j]] == Basis_At_Lower && sign(spx.r[j]) < 0
                 spx.enter = spx.nonbasic[j]
                 spx.enter_pos = j
                 max_s = spx.s[j]
@@ -98,7 +99,7 @@ function pivot_Dantzig(spx::SpxData)
     max_r = 0.0
     for j = 1:length(spx.r)
         if abs(spx.r[j]) > max_r
-            if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER
+            if spx.basis_status[spx.nonbasic[j]] == Basis_At_Upper
                 if spx.r[j] > 1e-6
                     spx.enter = spx.nonbasic[j]
                     spx.enter_pos = j
@@ -126,7 +127,7 @@ function pivot_to_remove_artificials(spx::SpxData)
     min_enter = spx.start_artvars
     for j = 1:length(spx.r)
         if spx.nonbasic[j] < min_enter
-            if spx.basis_status[spx.nonbasic[j]] == BASIS_AT_UPPER
+            if spx.basis_status[spx.nonbasic[j]] == Basis_At_Upper
                 if spx.r[j] > -1e-10
                     spx.enter = spx.nonbasic[j]
                     spx.enter_pos = j

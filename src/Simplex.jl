@@ -15,7 +15,8 @@ const TO = TimerOutput()
 nrows(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 1)
 ncols(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 2)
 
-include("Constant.jl")
+include("Parameters.jl")
+include("Status.jl")
 include("GLPK.jl")
 include("LP.jl")
 include("PhaseOne/PhaseOne.jl")
@@ -23,7 +24,7 @@ include("PhaseOne/PhaseOne.jl")
 mutable struct SpxData{T<:AbstractArray}
     lpdata::MatOI.AbstractLPForm
 
-    basis_status::Vector{Int}
+    basis_status::Vector{BasisStatus}
     basic::Vector{Int}
     nonbasic::Vector{Int}
 
@@ -55,7 +56,7 @@ mutable struct SpxData{T<:AbstractArray}
     leave::Int
 
     update::Bool # whether to update basis or not
-    status::Status
+    status::AlgorithmStatus
 
     iter::Int
     history::Vector{Vector{Int}}
@@ -70,6 +71,8 @@ mutable struct SpxData{T<:AbstractArray}
 
     # start index of the artificial variables
     start_artvars::Int
+
+    params::Parameters
 
     function SpxData(lpdata::MatOI.AbstractLPForm{S}, T::Type) where S
         spx = new{T}()
@@ -108,6 +111,8 @@ mutable struct SpxData{T<:AbstractArray}
         spx.v = T{Float64}(undef, nrows(lpdata))
         spx.s = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
         spx.g = T{Float64}(undef, nrows(lpdata))
+
+        spx.params = Parameters()
 
         fill!(spx.matQ, 0)
         fill!(spx.x, 0)
@@ -158,7 +163,7 @@ end
 
 function compute_xB(spx::SpxData)
     @timeit TO "compute xB" begin
-        if USE_INVB
+        if spx.params.use_invB
             # spx.view_basic_x .= spx.invB * (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
             spx.x[spx.basic] .= spx.invB * (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         else
@@ -174,7 +179,7 @@ end
 
 function compute_pB(spx::SpxData)
     @timeit TO "compute pB" begin
-        if USE_INVB
+        if spx.params.use_invB
             # spx.pB .= transpose(spx.invB) * spx.view_basic_c
             spx.pB .= transpose(spx.invB) * spx.lpdata.c[spx.basic]
         else
@@ -192,7 +197,7 @@ end
 
 function compute_direction(spx::SpxData)
     @timeit TO "compute direction" begin
-        if USE_INVB
+        if spx.params.use_invB
             spx.d .= spx.invB * spx.lpdata.A[:,spx.enter]
         else
             view_A_enter = @view spx.lpdata.A[:,spx.enter]
@@ -228,7 +233,7 @@ function pivot(spx::SpxData)
     # @show norm(spx.d)
 
     # Terminate with unboundedness
-    if norm(spx.d) < EPS
+    if isNonPositive(norm(spx.d))
         return
     end
 
@@ -239,11 +244,11 @@ function pivot(spx::SpxData)
         if spx.r[spx.enter_pos] < 0
             best_t = Inf
             for i = 1:nrows(spx.lpdata)
-                if spx.d[i] < -EPS && best_t > spx.tu[i]
+                if isNegative(spx.d[i]) && best_t > spx.tu[i]
                     best_t = spx.tu[i]
                     spx.leave = i
                 end
-                if spx.d[i] > +EPS && best_t > spx.tl[i]
+                if isPositive(spx.d[i]) && best_t > spx.tl[i]
                     best_t = spx.tl[i]
                     spx.leave = i
                 end
@@ -251,17 +256,17 @@ function pivot(spx::SpxData)
             if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
                 best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
                 spx.x[spx.enter] = spx.lpdata.v_ub[spx.enter]
-                spx.basis_status[spx.enter] = BASIS_AT_UPPER
+                spx.basis_status[spx.enter] = Basis_At_Upper
                 spx.update = false
             end
         elseif spx.r[spx.enter_pos] > 0
             best_t = -Inf
             for i = 1:nrows(spx.lpdata)
-                if spx.d[i] < -EPS && best_t < spx.tl[i]
+                if isNegative(spx.d[i]) && best_t < spx.tl[i]
                     best_t = spx.tl[i]
                     spx.leave = i
                 end
-                if spx.d[i] > +EPS && best_t < spx.tu[i]
+                if isPositive(spx.d[i]) && best_t < spx.tu[i]
                     best_t = spx.tu[i]
                     spx.leave = i
                 end
@@ -272,7 +277,7 @@ function pivot(spx::SpxData)
             if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
                 best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_ub[spx.enter]
                 spx.x[spx.enter] = spx.lpdata.v_lb[spx.enter]
-                spx.basis_status[spx.enter] = BASIS_AT_LOWER
+                spx.basis_status[spx.enter] = Basis_At_Lower
                 spx.update = false
             end
         else
@@ -280,10 +285,10 @@ function pivot(spx::SpxData)
         end
         @assert spx.leave > 0
 
-        best_t = abs(best_t*spx.d[spx.leave]) < EPS ? 0.0 : best_t
+        best_t = isZero(best_t*spx.d[spx.leave]) ? 0.0 : best_t
         # @show abs(best_t*spx.d[spx.leave])
         # if abs(best_t) < Inf
-        #     best_t = abs(best_t*spx.d[spx.leave]) < EPS ? 0.0 : best_t
+        #     best_t = isZero(best_t*spx.d[spx.leave]) ? 0.0 : best_t
         # else
         #     spx.leave = -1
         #     return
@@ -312,7 +317,7 @@ function detect_cycle(spx::SpxData)
             @info "Cycle is detected."
             spx.status = Cycle
         end
-        if length(spx.history) == MAX_HISTORY
+        if length(spx.history) == spx.params.max_history
             pop!(spx.history)
         end
         push!(spx.history, deepcopy(spx.basic))
@@ -325,15 +330,15 @@ function update_basis(spx::SpxData)
     # update basis status
     @timeit TO "update basis" begin
         if isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], atol=1e-6)
-            spx.basis_status[spx.basic[spx.leave]] = BASIS_AT_LOWER
+            spx.basis_status[spx.basic[spx.leave]] = Basis_At_Lower
             spx.x[spx.basic[spx.leave]] = spx.lpdata.v_lb[spx.basic[spx.leave]]
         elseif isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]], atol=1e-6)
-            spx.basis_status[spx.basic[spx.leave]] = BASIS_AT_UPPER
+            spx.basis_status[spx.basic[spx.leave]] = Basis_At_Upper
             spx.x[spx.basic[spx.leave]] = spx.lpdata.v_ub[spx.basic[spx.leave]]
         else
-            spx.basis_status[spx.basic[spx.leave]] = BASIS_FREE
+            spx.basis_status[spx.basic[spx.leave]] = Basis_Free
         end
-        spx.basis_status[spx.enter] = BASIS_BASIC
+        spx.basis_status[spx.enter] = Basis_Basic
 
         # update basic/nonbasic indices
         spx.nonbasic[spx.enter_pos] = deepcopy(spx.basic[spx.leave])
@@ -343,14 +348,14 @@ function update_basis(spx::SpxData)
 
     detect_cycle(spx)
 
-    if USE_INVB
+    if spx.params.use_invB
         update_inverse_basis(spx)
     end
 end
 
 function iterate(spx::SpxData)
     @timeit TO "One iteration" begin
-        if spx.iter % PRINT_ITER_FREQ == 0 && spx.pivot_rule != Artificial
+        if spx.iter % spx.params.print_iter_freq == 0 && spx.pivot_rule != Artificial
             println("Iteration $(spx.iter): objective $(objective(spx))")
         end
 
@@ -472,7 +477,7 @@ function run(prob::MatOI.LPForm{T, AT, VT};
 end
 
 function run_core(spx::SpxData)
-    if USE_INVB
+    if spx.params.use_invB
         inverse(spx)
     end
     # @show spx.invB
@@ -482,7 +487,7 @@ function run_core(spx::SpxData)
 
     # main iterations
     my_pivot_rule = spx.pivot_rule
-    while spx.status in [Solve, Cycle] && spx.iter < MAX_ITER
+    while spx.status in [Solve, Cycle] && spx.iter < spx.params.max_iter
         # Use Bland's rule if cycle is detected
         if spx.status == Cycle
             spx.pivot_rule = Bland
@@ -495,6 +500,6 @@ end
 include("Presolve.jl")
 include("PivotRules.jl")
 include("WarmStart.jl")
-# include("utils.jl")
+include("utils.jl")
 
 end # module

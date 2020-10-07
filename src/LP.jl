@@ -43,7 +43,7 @@ function canonical_form(standard::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     @assert length(xl) == lp_ncols
     @assert length(xu) == lp_ncols
     for i = 1:nineq
-        if standard.c_lb[ineq[i]] > -INF
+        if isFinite(standard.c_lb[ineq[i]])
             xu[ncols(standard) + i] = standard.c_ub[ineq[i]] - standard.c_lb[ineq[i]]
         end
     end
@@ -54,10 +54,10 @@ function canonical_form(standard::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     # create the submatrix for slack
     I = Int64[]; J = Int64[]; V = Float64[]; j = 1;
     for i in ineq
-        if standard.c_lb[i] > -INF
+        if isFinite(standard.c_lb[i])
             push!(I, i); push!(J, j); push!(V, -1.0);
             j += 1
-        elseif standard.c_ub[i] < INF
+        elseif isFinite(standard.c_ub[i])
             b[i] = standard.c_ub[i]
             push!(I, i); push!(J, j); push!(V, 1.0);
             j += 1
