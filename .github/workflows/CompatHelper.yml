@@ -14,8 +14,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: julia -e '
-          using CompatHelper; 
+          using Pkg, CompatHelper; 
           my_registries = [Pkg.RegistrySpec(name = "MatrixOptInterface",
                                             uuid = "2f4eb8e6-3e35-4ae4-8c7a-f3d7d9bf20ed",
-                                            url = "https://github.com/jump-dev/MatrixOptInterface.jl.git")]
+                                            url = "https://github.com/jump-dev/MatrixOptInterface.jl.git")];
           CompatHelper.main(; registries = my_registries)'
