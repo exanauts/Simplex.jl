@@ -65,25 +65,20 @@ function run(lp::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
     # @show num_orgvars, num_artif
 
     # If x is infeasible, we need to solve a piecewise LP.
-    newB = nothing
     p1artif = Int[]
     if !is_feasible
         # @warn("CPLEX initial basis solution is infeasible.")
         # convert to phase-one form
-        p1lp, x, newB, p1artif = reformulate(cpxlp, x, num_orgvars, num_artif, B)
-        @assert size(p1lp.A,1) == length(newB)
-    else
-        p1lp = cpxlp
-        newB = B
+        cpxlp, B, p1artif = reformulate(cpxlp, x, num_orgvars, num_artif, B)
+        @assert size(cpxlp.A,1) == length(B)
     end
 
     # load the problem
-    spx = Simplex.SpxData(p1lp, Tv)
+    spx = Simplex.SpxData(cpxlp, Tv)
     spx.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
-    Simplex.set_basis(spx, newB)
-    spx.x .= x
+    Simplex.set_basis(spx, B)
 
     # Run simplex method
     Simplex.run_core(spx)
@@ -381,7 +376,7 @@ function reformulate(lp::MatOI.LPSolverForm{T,AT,VT}, x::VT, num_orgvars::Int, n
     senses = fill(MatOI.EQUAL_TO, lp_nrows)
     p1lp = MatOI.LPSolverForm{T,typeof(A),typeof(c)}(lp.direction, c, A, b, senses, xl, xu)
 
-    return p1lp, x, sort(basis), artif_col_idx
+    return p1lp, sort(basis), artif_col_idx
 end
 
 """
