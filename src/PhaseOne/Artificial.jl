@@ -46,13 +46,19 @@ function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}; basis::Array{Int,1} = In
 
     artif_idx = Int[]
     if length(basis) > 0
+        # Add the artifical variables that are identified as basis
         for j in 1:length(basis)
+            # if basis indicates an artificial variable,
             if basis[j] > ncols(lp)
+                if basis[j] - ncols(lp) > nrows(lp)
+                    @error "Invalid basis provided for phase one"
+                end
                 push!(artif_idx, basis[j])
                 basis[j] = ncols(lp) + length(artif_idx)
             end
         end
     else
+        # if no basis is provided, return (m+1,...,m+n)
         artif_idx = collect(1:nrows(lp)) .+ ncols(lp)
     end
 
@@ -113,11 +119,16 @@ function reformulate(lp::MatOI.LPSolverForm{T, AT, VT}; basis::Array{Int,1} = In
         error("Not supported vector type $(VT)")
     end
 
+    artif_col_idx = Int[]
+    for j = 1:nartif
+        push!(artif_col_idx, ncols(lp)+j)
+    end
+
     senses = fill(MatOI.EQUAL_TO, nrows(lp))
     return MatOI.LPSolverForm{T, typeof(A), typeof(c)}(
         MOI.MIN_SENSE,
         c, A, lp.b, senses, xl, xu
-    )
+    ), artif_col_idx
 end
 
 function run(prob::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
@@ -128,7 +139,7 @@ function run(prob::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
     pivot_rule = kwargs[:pivot_rule]
 
     # convert to phase-one form
-    p1lp = reformulate(prob)
+    p1lp, artif = reformulate(prob)
 
     # load the problem
     spx = Simplex.SpxData(p1lp, Tv)
@@ -140,6 +151,11 @@ function run(prob::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
 
     # Run simplex method
     Simplex.run_core(spx)
+
+    for j in artif
+        spx.lpdata.v_lb[j] = 0.0
+        spx.lpdata.v_ub[j] = 0.0
+    end
     
     return spx
 end

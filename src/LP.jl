@@ -19,7 +19,8 @@ the canonical form is given by
     0 <= s2 <= Inf
     0 <= s3 <= bu - bl
 """
-function canonical_form(standard::MatOI.LPForm{T, AT}) where {T, AT}
+
+function canonical_form(standard::MatOI.LPForm{T, AT, VT}) where {T, AT, VT}
     # count the number of inequality constraints
     ineq = Int[]
     for i = 1:nrows(standard)
@@ -42,7 +43,7 @@ function canonical_form(standard::MatOI.LPForm{T, AT}) where {T, AT}
     @assert length(xl) == lp_ncols
     @assert length(xu) == lp_ncols
     for i = 1:nineq
-        if standard.v_lb[ineq[i]] > -INF
+        if standard.c_lb[ineq[i]] > -INF
             xu[ncols(standard) + i] = standard.c_ub[ineq[i]] - standard.c_lb[ineq[i]]
         end
     end

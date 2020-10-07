@@ -128,8 +128,8 @@ rhs(spx::SpxData) = spx.lpdata.b
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
-        # @show size(spx.invB), size(spx.view_basic_A), size(spx.matI), cond(Matrix(spx.view_basic_A))
         # spx.invB .= spx.view_basic_A \ spx.matI
+        # @show size(spx.invB), size(spx.lpdata.A), size(spx.matI)
         spx.invB .= spx.lpdata.A[:,spx.basic] \ spx.matI
         # droptol!(spx.invB, 1e-10)
     end
@@ -165,10 +165,10 @@ function compute_xB(spx::SpxData)
             # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
             spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
         end
-        @show spx.basic
-        @show spx.x[spx.basic] .- spx.lpdata.xl[spx.basic]
-        @assert spx.x[spx.basic] >= spx.lpdata.xl[spx.basic]
-        @assert spx.x[spx.basic] <= spx.lpdata.xu[spx.basic]
+        # @show spx.basic
+        # @show spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]
+        @assert spx.x[spx.basic] >= spx.lpdata.v_lb[spx.basic]
+        @assert spx.x[spx.basic] <= spx.lpdata.v_ub[spx.basic]
     end
 end
 
@@ -250,7 +250,7 @@ function pivot(spx::SpxData)
             end
             if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
                 best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
-                spx.x[spx.enter] .= spx.lpdata.v_ub[spx.enter]
+                spx.x[spx.enter] = spx.lpdata.v_ub[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_UPPER
                 spx.update = false
             end
@@ -270,8 +270,8 @@ function pivot(spx::SpxData)
                 # end
             end
             if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
-                best_t = spx.lpdata.xl[spx.enter] - spx.lpdata.v_ub[spx.enter]
-                spx.x[spx.enter] .= spx.lpdata.v_lb[spx.enter]
+                best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_ub[spx.enter]
+                spx.x[spx.enter] = spx.lpdata.v_lb[spx.enter]
                 spx.basis_status[spx.enter] = BASIS_AT_LOWER
                 spx.update = false
             end
@@ -292,15 +292,15 @@ function pivot(spx::SpxData)
     end
 
     # update solution
-    # @show spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]]
+    # @show spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]]
     spx.x[spx.basic] .-= best_t * spx.d
     # spx.view_basic_x .-= best_t * spx.d
-    # @show spx.x[spx.basic[spx.leave]], spx.lpdata.xl[spx.basic[spx.leave]], spx.lpdata.xu[spx.basic[spx.leave]]
+    # @show spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]]
     @assert spx.x[spx.basic[spx.leave]] >= spx.lpdata.v_lb[spx.basic[spx.leave]] - 1e-8
     @assert spx.x[spx.basic[spx.leave]] <= spx.lpdata.v_ub[spx.basic[spx.leave]] + 1e-8
     if spx.update
         spx.x[spx.enter] += best_t
-        # @show spx.x[spx.enter], spx.lpdata.xl[spx.enter], spx.lpdata.xu[spx.enter]
+        # @show spx.x[spx.enter], spx.lpdata.v_lb[spx.enter], spx.lpdata.v_ub[spx.enter]
         @assert spx.x[spx.enter] >= spx.lpdata.v_lb[spx.enter] - 1e-8
         @assert spx.x[spx.enter] <= spx.lpdata.v_ub[spx.enter] + 1e-8
     end
@@ -392,12 +392,12 @@ function iterate(spx::SpxData)
     end
 end
 
-function run(prob::MatOI.AbstractLPForm{T};
+function run(prob::MatOI.LPForm{T, AT, VT};
     basis::Vector{Int} = Int[],
     pivot_rule::PivotRule = Dantzig,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
     gpu = false,
-    performance_io::IO = stdout) where T
+    performance_io::IO = stdout) where {T, AT, VT}
 
     reset_timer!(TO)
     status = NotSolved
@@ -426,6 +426,7 @@ function run(prob::MatOI.AbstractLPForm{T};
 
                 # Mark the original objective function 
                 original_objective = deepcopy(processed_prob.c)
+                # @show original_objective
 
                 @timeit TO "Phase 1" begin
                     spx = PhaseOne.run(processed_prob, TT,
@@ -443,6 +444,7 @@ function run(prob::MatOI.AbstractLPForm{T};
 
                 # Replace back to the original objective function
                 spx.lpdata.c .= [original_objective; zeros(length(spx.lpdata.c)-length(original_objective))]
+                # @show spx.lpdata.c
 
                 # reset the status
                 spx.status = Solve
