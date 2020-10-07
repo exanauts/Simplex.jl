@@ -15,10 +15,6 @@ julia --project=.. ../examples/netlib.jl
 
 See [results.md](./examples/results.md) for numerical results.
 
-## Applications
-
-- We are implementing a successive linear programming at https://github.com/exanauts/SuccessiveLinearProgramming
-
 ## Acknowledgement
 
 This is a part of ExaSGD project.
