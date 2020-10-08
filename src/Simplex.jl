@@ -62,16 +62,13 @@ mutable struct SpxData{T<:AbstractArray}
     iter::Int
     history::Vector{Vector{Int}}
 
-    # steepest-edge pivot only
-    gamma::T # steepest-edge weights
-    v::T     # B^{-T} d
-    s::T     # = r.^2 ./ gamma
-    g::T     # invB * A_j
-
     # start index of the artificial variables
     start_artvars::Int
 
     params::Parameters
+    pivot_data::AbstractPivotRule{T}
+
+    array_type::Type
 
     function SpxData(lpdata::MatOI.AbstractLPForm{S}, T::Type) where S
         spx = new{T}()
@@ -81,6 +78,7 @@ mutable struct SpxData{T<:AbstractArray}
         if !in(T,[CuArray,Array])
             error("Unkown array type $(T).")
         end
+        spx.array_type = T
 
         # spx.view_basic_A = TArray{T,2}(undef, nrows(lpdata), nrows(lpdata))
         # spx.view_nonbasic_A = T{Float64,2}(undef, nrows(lpdata), ncols(lpdata) - nrows(lpdata))
@@ -104,12 +102,6 @@ mutable struct SpxData{T<:AbstractArray}
         spx.d = T{Float64}(undef, nrows(lpdata))
         spx.tl = T{Float64}(undef, nrows(lpdata))
         spx.tu = T{Float64}(undef, nrows(lpdata))
-
-        # Steepest-edge pivot only
-        spx.gamma = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
-        spx.v = T{Float64}(undef, nrows(lpdata))
-        spx.s = T{Float64}(undef, ncols(lpdata) - nrows(lpdata))
-        spx.g = T{Float64}(undef, nrows(lpdata))
 
         spx.params = Parameters()
 
@@ -368,7 +360,7 @@ function iterate(spx::SpxData)
             if spx.params.pivot_rule == SteepestEdgeRule
                 @timeit TO "compute v" begin
                     # compute v before changing basis
-                    spx.v .= transpose(spx.invB) * spx.d
+                    spx.pivot_data.v .= transpose(spx.invB) * spx.d
                 end
             end
 
@@ -460,6 +452,12 @@ function run(prob::MatOI.LPForm{T, AT, VT};
 end
 
 function run_core(spx::SpxData)
+
+    # Initialize pivot data for steepest edge rule
+    if spx.params.pivot_rule == SteepestEdgeRule && !isdefined(spx, :pivot_data)
+        spx.pivot_data = SteepestEdgeRule(spx.array_type, nrows(spx.lpdata), ncols(spx.lpdata))
+    end
+
     if spx.params.use_invB
         inverse(spx)
     end
