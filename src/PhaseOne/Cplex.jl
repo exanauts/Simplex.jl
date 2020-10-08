@@ -75,7 +75,7 @@ function run(lp::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
 
     # load the problem
     spx = Simplex.SpxData(cpxlp, Tv)
-    spx.pivot_rule = deepcopy(pivot_rule)
+    spx.params.pivot_rule = deepcopy(pivot_rule)
 
     # set basis
     Simplex.set_basis(spx, B)

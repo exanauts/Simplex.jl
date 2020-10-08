@@ -16,12 +16,12 @@ phaseone_methods = [
     Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
-    Simplex.Bland,
-    Simplex.Steepest,
-    Simplex.Dantzig,
+    Simplex.BlandRule,
+    Simplex.SteepestEdgeRule,
+    Simplex.DantzigRule,
 ]
 
-function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.Status
+function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.AlgorithmStatus
     c, xl, xu, bl, bu, A = Simplex.GLPK_read_mps(netlib)
     lp =  MatOI.LPForm{Float64, typeof(A), typeof(c)}(
         MOI.MIN_SENSE, c, A, bl, bu, xl, xu
