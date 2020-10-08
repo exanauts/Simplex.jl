@@ -6,14 +6,8 @@ Empty struct for Bland's pivot rule that can avoid cycling in pivoting
 struct BlandRule{T} <: AbstractPivotRule{T} end
 
 "Find an entering variable based on Bland's rule"
-function pivot(::Type{BlandRule}, spx::SpxData)
+function find_entering_variable!(::Type{BlandRule}, spx::SpxData)
     spx.enter = -1
-
-    # compute reduced cost
-    compute_reduced_cost(spx)
-    # @show spx.r
-    # @show spx.nonbasic
-
     min_enter = ncols(spx.lpdata) + 1
     for j = 1:length(spx.r)
         if spx.nonbasic[j] < min_enter
@@ -62,13 +56,9 @@ mutable struct SteepestEdgeRule{T} <: AbstractPivotRule{T}
 end
 
 "Find an entering variable based on steepest edge pivot rule"
-function pivot(::Type{SteepestEdgeRule}, spx::SpxData)
+function find_entering_variable!(::Type{SteepestEdgeRule}, spx::SpxData)
 
-    compute_reduced_cost(spx)
-    # @show spx.r
-    # @show spx.nonbasic
     pd = spx.pivot_data
-
     @timeit TO "compute steepest edge weights" begin
         if spx.iter == 1
             for j = 1:length(spx.nonbasic)
@@ -118,12 +108,8 @@ Struct for Dantzig's pivot rule
 struct DantzigRule{T} <: AbstractPivotRule{T} end
 
 "Find an entering variable based on Dantzig's pivot rule"
-function pivot(::Type{DantzigRule}, spx::SpxData)
+function find_entering_variable!(::Type{DantzigRule}, spx::SpxData)
     spx.enter = -1
-
-    # compute reduced cost
-    compute_reduced_cost(spx)
-
     max_r = 0.0
     for j = 1:length(spx.r)
         if abs(spx.r[j]) > max_r

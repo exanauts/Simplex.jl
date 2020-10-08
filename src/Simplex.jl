@@ -62,9 +62,6 @@ mutable struct SpxData{T<:AbstractArray}
     iter::Int
     history::Vector{Vector{Int}}
 
-    # start index of the artificial variables
-    start_artvars::Int
-
     params::Parameters
     pivot_data::AbstractPivotRule{T}
 
@@ -122,22 +119,14 @@ rhs(spx::SpxData) = spx.lpdata.b
 
 function inverse(spx::SpxData)
     @timeit TO "inverse" begin
-        # spx.invB .= spx.view_basic_A \ spx.matI
-        # @show size(spx.invB), size(spx.lpdata.A), size(spx.matI)
         spx.invB .= spx.lpdata.A[:,spx.basic] \ spx.matI
-        # droptol!(spx.invB, 1e-10)
     end
 end
 
 function update_inverse_basis(spx::SpxData)
     if spx.iter % 100 > 0
         @timeit TO "PF" begin
-            # view_invB_leave = @view spx.invB[spx.leave,:]
-            # view_matQ_leave = @view spx.matQ[spx.leave,:]
-
             # compute Q
-            # spx.matQ .= spx.d * view_invB_leave' ./ spx.d[spx.leave]
-            # view_matQ_leave .= view_invB_leave .* (1.0 - 1.0 / spx.d[spx.leave])
             spx.matQ .= spx.d * spx.invB[spx.leave,:]' ./ spx.d[spx.leave]
             spx.matQ[spx.leave,:] .= spx.invB[spx.leave,:] .* (1.0 - 1.0 / spx.d[spx.leave])
 
@@ -150,24 +139,22 @@ function update_inverse_basis(spx::SpxData)
     # @show mean(spx.invB), var(spx.invB), minimum(spx.invB), maximum(spx.invB)
 end
 
-function compute_xB(spx::SpxData)
-    @timeit TO "compute xB" begin
-        if spx.params.use_invB
-            # spx.view_basic_x .= spx.invB * (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
-            spx.x[spx.basic] .= spx.invB * (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
-        else
-            # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
-            spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
-        end
-        # @show spx.basic
-        # @show spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]
-        @assert spx.x[spx.basic] >= spx.lpdata.v_lb[spx.basic]
-        @assert spx.x[spx.basic] <= spx.lpdata.v_ub[spx.basic]
+"Compute basic solution"
+function compute_xB!(spx::SpxData)
+    if spx.params.use_invB
+        # spx.view_basic_x .= spx.invB * (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
+        spx.x[spx.basic] .= spx.invB * (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
+    else
+        # spx.view_basic_x .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.view_nonbasic_A * spx.view_nonbasic_x)
+        spx.x[spx.basic] .= spx.lpdata.A[:,spx.basic] \ (rhs(spx) .- spx.lpdata.A[:,spx.nonbasic] * spx.x[spx.nonbasic])
     end
+    @assert spx.x[spx.basic] >= spx.lpdata.v_lb[spx.basic]
+    @assert spx.x[spx.basic] <= spx.lpdata.v_ub[spx.basic]
 end
 
-function compute_pB(spx::SpxData)
-    @timeit TO "compute pB" begin
+"Compute dual multiplier"
+function compute_pB!(spx::SpxData)
+    if spx.update
         if spx.params.use_invB
             # spx.pB .= transpose(spx.invB) * spx.view_basic_c
             spx.pB .= transpose(spx.invB) * spx.lpdata.c[spx.basic]
@@ -177,100 +164,73 @@ function compute_pB(spx::SpxData)
     end
 end
 
-function compute_reduced_cost(spx::SpxData)
-    @timeit TO "compute reduced cost" begin
-        # spx.r .= spx.view_nonbasic_c .- spx.view_nonbasic_A' * spx.pB
-        spx.r .= spx.lpdata.c[spx.nonbasic] .- spx.lpdata.A[:,spx.nonbasic]' * spx.pB
+"Compute reduced cost"
+function compute_reduced_cost!(spx::SpxData)
+    # spx.r .= spx.view_nonbasic_c .- spx.view_nonbasic_A' * spx.pB
+    spx.r .= spx.lpdata.c[spx.nonbasic] .- spx.lpdata.A[:,spx.nonbasic]' * spx.pB
+end
+
+"Compute direction"
+function compute_direction!(spx::SpxData)
+    if spx.params.use_invB
+        spx.d .= spx.invB * spx.lpdata.A[:,spx.enter]
+    else
+        view_A_enter = @view spx.lpdata.A[:,spx.enter]
+        # @show cond(Matrix(spx.lpdata.A[:,spx.basic]))
+        spx.d .= spx.lpdata.A[:,spx.basic] \ view_A_enter
     end
 end
 
-function compute_direction(spx::SpxData)
-    @timeit TO "compute direction" begin
-        if spx.params.use_invB
-            spx.d .= spx.invB * spx.lpdata.A[:,spx.enter]
-        else
-            view_A_enter = @view spx.lpdata.A[:,spx.enter]
-            # @show cond(Matrix(spx.lpdata.A[:,spx.basic]))
-            spx.d .= spx.lpdata.A[:,spx.basic] \ view_A_enter
-        end
-    end
-end
-
-function compute_entering_variable(spx::SpxData)
-    @timeit TO "compute entering variable" begin
-        pivot(spx.params.pivot_rule, spx)
-    end
-end
-
-function pivot(spx::SpxData)
+"perform a ratio test and update solution"
+function ratio_test!(spx::SpxData)
     spx.leave = -1
     spx.update = true
     best_t = 0.0
 
-    # compute the direction
-    compute_direction(spx)
-    # @show norm(spx.d)
-
-    # Terminate with unboundedness
-    if isNonPositive(norm(spx.d))
-        return
-    end
-
-    # ratio test
-    @timeit TO "ratio test" begin
-        spx.tl .= (spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]) ./ spx.d
-        spx.tu .= (spx.x[spx.basic] .- spx.lpdata.v_ub[spx.basic]) ./ spx.d
-        if spx.r[spx.enter_pos] < 0
-            best_t = Inf
-            for i = 1:nrows(spx.lpdata)
-                if isNegative(spx.d[i]) && best_t > spx.tu[i]
-                    best_t = spx.tu[i]
-                    spx.leave = i
-                end
-                if isPositive(spx.d[i]) && best_t > spx.tl[i]
-                    best_t = spx.tl[i]
-                    spx.leave = i
-                end
+    spx.tl .= (spx.x[spx.basic] .- spx.lpdata.v_lb[spx.basic]) ./ spx.d
+    spx.tu .= (spx.x[spx.basic] .- spx.lpdata.v_ub[spx.basic]) ./ spx.d
+    if spx.r[spx.enter_pos] < 0
+        best_t = Inf
+        for i = 1:nrows(spx.lpdata)
+            if isNegative(spx.d[i]) && best_t > spx.tu[i]
+                best_t = spx.tu[i]
+                spx.leave = i
             end
-            if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
-                best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
-                spx.x[spx.enter] = spx.lpdata.v_ub[spx.enter]
-                spx.basis_status[spx.enter] = Basis_At_Upper
-                spx.update = false
+            if isPositive(spx.d[i]) && best_t > spx.tl[i]
+                best_t = spx.tl[i]
+                spx.leave = i
             end
-        elseif spx.r[spx.enter_pos] > 0
-            best_t = -Inf
-            for i = 1:nrows(spx.lpdata)
-                if isNegative(spx.d[i]) && best_t < spx.tl[i]
-                    best_t = spx.tl[i]
-                    spx.leave = i
-                end
-                if isPositive(spx.d[i]) && best_t < spx.tu[i]
-                    best_t = spx.tu[i]
-                    spx.leave = i
-                end
-            end
-            if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
-                best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_ub[spx.enter]
-                spx.x[spx.enter] = spx.lpdata.v_lb[spx.enter]
-                spx.basis_status[spx.enter] = Basis_At_Lower
-                spx.update = false
-            end
-        else
-            @error("The reduced cost is zero.")
         end
-        @assert spx.leave > 0
-
-        best_t = isZero(best_t*spx.d[spx.leave]) ? 0.0 : best_t
-        # @show abs(best_t*spx.d[spx.leave])
-        # if abs(best_t) < Inf
-        #     best_t = isZero(best_t*spx.d[spx.leave]) ? 0.0 : best_t
-        # else
-        #     spx.leave = -1
-        #     return
-        # end
-        # @assert abs(spx.d[spx.leave]) >= 1e-8
+        if best_t > spx.lpdata.v_ub[spx.enter] - spx.x[spx.enter] && best_t < Inf
+            best_t = spx.lpdata.v_ub[spx.enter] - spx.lpdata.v_lb[spx.enter]
+            spx.x[spx.enter] = spx.lpdata.v_ub[spx.enter]
+            spx.basis_status[spx.enter] = Basis_At_Upper
+            spx.update = false
+        end
+    elseif spx.r[spx.enter_pos] > 0
+        best_t = -Inf
+        for i = 1:nrows(spx.lpdata)
+            if isNegative(spx.d[i]) && best_t < spx.tl[i]
+                best_t = spx.tl[i]
+                spx.leave = i
+            end
+            if isPositive(spx.d[i]) && best_t < spx.tu[i]
+                best_t = spx.tu[i]
+                spx.leave = i
+            end
+        end
+        if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
+            best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_ub[spx.enter]
+            spx.x[spx.enter] = spx.lpdata.v_lb[spx.enter]
+            spx.basis_status[spx.enter] = Basis_At_Lower
+            spx.update = false
+        end
+    else
+        @error("The reduced cost is zero.")
     end
+    @assert spx.leave > 0
+
+    best_t = isZero(best_t*spx.d[spx.leave]) ? 0.0 : best_t
 
     # update solution
     # @show spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]]
@@ -287,89 +247,85 @@ function pivot(spx::SpxData)
     end
 end
 
-function detect_cycle(spx::SpxData)
-    @timeit TO "detect cycly" begin
-        if in(spx.basic, spx.history)
-            @info "Cycle is detected."
-            spx.status = Cycle
-        end
-        if length(spx.history) == spx.params.max_history
-            pop!(spx.history)
-        end
-        push!(spx.history, deepcopy(spx.basic))
+"Detect pivot cycle"
+function detect_cycle!(spx::SpxData)
+    if in(spx.basic, spx.history)
+        @info "Cycle is detected."
+        spx.status = Cycle
     end
+    if length(spx.history) == spx.params.max_history
+        pop!(spx.history)
+    end
+    push!(spx.history, deepcopy(spx.basic))
 end
 
-function update_basis(spx::SpxData)
-    @assert spx.d[spx.leave] != 0
+function update_basis!(spx::SpxData)
 
-    # update basis status
-    @timeit TO "update basis" begin
-        if isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], atol=1e-6)
-            spx.basis_status[spx.basic[spx.leave]] = Basis_At_Lower
-            spx.x[spx.basic[spx.leave]] = spx.lpdata.v_lb[spx.basic[spx.leave]]
-        elseif isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]], atol=1e-6)
-            spx.basis_status[spx.basic[spx.leave]] = Basis_At_Upper
-            spx.x[spx.basic[spx.leave]] = spx.lpdata.v_ub[spx.basic[spx.leave]]
-        else
-            spx.basis_status[spx.basic[spx.leave]] = Basis_Free
-        end
-        spx.basis_status[spx.enter] = Basis_Basic
-
-        # update basic/nonbasic indices
-        spx.nonbasic[spx.enter_pos] = deepcopy(spx.basic[spx.leave])
-        spx.basic[spx.leave] = deepcopy(spx.enter)
-        # @show spx.basic
+    if spx.params.pivot_rule == SteepestEdgeRule
+        # compute v before changing basis
+        spx.pivot_data.v .= transpose(spx.invB) * spx.d
     end
 
-    detect_cycle(spx)
+    # update basis status
+    if isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_lb[spx.basic[spx.leave]], atol=1e-6)
+        spx.basis_status[spx.basic[spx.leave]] = Basis_At_Lower
+        spx.x[spx.basic[spx.leave]] = spx.lpdata.v_lb[spx.basic[spx.leave]]
+    elseif isapprox(spx.x[spx.basic[spx.leave]], spx.lpdata.v_ub[spx.basic[spx.leave]], atol=1e-6)
+        spx.basis_status[spx.basic[spx.leave]] = Basis_At_Upper
+        spx.x[spx.basic[spx.leave]] = spx.lpdata.v_ub[spx.basic[spx.leave]]
+    else
+        spx.basis_status[spx.basic[spx.leave]] = Basis_Free
+    end
+    spx.basis_status[spx.enter] = Basis_Basic
+
+    # update basic/nonbasic indices
+    spx.nonbasic[spx.enter_pos] = deepcopy(spx.basic[spx.leave])
+    spx.basic[spx.leave] = deepcopy(spx.enter)
+    # @show spx.basic
 
     if spx.params.use_invB
         update_inverse_basis(spx)
     end
 end
 
+"Take one interation"
 function iterate(spx::SpxData)
-    @timeit TO "One iteration" begin
-        if spx.iter % spx.params.print_iter_freq == 0
-            println("Iteration $(spx.iter): objective $(objective(spx))")
-        end
-
-        if spx.update
-            compute_pB(spx)
-            # @show spx.pB
-        end
-
-        compute_entering_variable(spx)
-
-        if spx.enter < 0
-            spx.status = Optimal
-            return
-        end
-
-        pivot(spx)
-
-        if spx.leave < 0
-            spx.status = Unbounded
-            return
-        end
-
-        # println("Update basis? ", spx.update)
-
-        if spx.update
-            if spx.params.pivot_rule == SteepestEdgeRule
-                @timeit TO "compute v" begin
-                    # compute v before changing basis
-                    spx.pivot_data.v .= transpose(spx.invB) * spx.d
-                end
-            end
-
-            # println("  Entering/Leaving variables: $(spx.enter), $(spx.basic[spx.leave])")
-            update_basis(spx)
-        end
-
-        spx.iter += 1
+    if spx.iter % spx.params.print_iter_freq == 0
+        println("Iteration $(spx.iter): objective $(objective(spx))")
     end
+
+    @timeit TO "compute dual multiplier" compute_pB!(spx)
+    @timeit TO "compute reduced cost" compute_reduced_cost!(spx)
+    @timeit TO "find entering variable" find_entering_variable!(spx.params.pivot_rule, spx)
+
+    # Optimal if no entering variable is found
+    if spx.enter < 0
+        spx.status = Optimal
+        return
+    end
+
+    @timeit TO "compute direction" compute_direction!(spx)
+
+    # Terminate with unboundedness
+    if isNonPositive(norm(spx.d))
+        spx.status = Unbounded
+        return
+    end
+
+    @timeit TO "ratio test" ratio_test!(spx)
+
+    # Unbounded if no leaving variable is found
+    if spx.leave < 0
+        spx.status = Unbounded
+        return
+    end
+
+    if spx.update
+        @timeit TO "update basis" update_basis!(spx)
+        @timeit TO "detect pivot cycle" detect_cycle!(spx)
+    end
+
+    spx.iter += 1
 end
 
 function run(prob::MatOI.LPForm{T, AT, VT};
@@ -388,9 +344,7 @@ function run(prob::MatOI.LPForm{T, AT, VT};
             presolve_prob = presolve(prob)
         end
 
-        @timeit TO "scaling" begin
-            scaling!(presolve_prob)
-        end
+        @timeit TO "scaling" scaling!(presolve_prob)
 
         # convert the problem into a canonical form
         canonical = Simplex.canonical_form(presolve_prob)
@@ -435,9 +389,7 @@ function run(prob::MatOI.LPForm{T, AT, VT};
                 set_basis(spx, basis)
             end
 
-            @timeit TO "Phase 2" begin
-                run_core(spx)
-            end
+            @timeit TO "Phase 2" run_core(spx)
 
             status = spx.status
             println("Phase 2 is done: status $(Symbol(spx.status))")
@@ -463,7 +415,7 @@ function run_core(spx::SpxData)
     end
     # @show spx.invB
 
-    compute_xB(spx)
+    @timeit TO "compute basic solution" compute_xB!(spx)
     # @show spx.x
 
     # main iterations
@@ -473,7 +425,7 @@ function run_core(spx::SpxData)
         if spx.status == Cycle
             spx.params.pivot_rule = BlandRule
         end
-        iterate(spx)
+        @timeit TO "One iteration" iterate(spx)
         spx.params.pivot_rule = my_pivot_rule
     end
 end
