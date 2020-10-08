@@ -16,9 +16,9 @@ phaseone_methods = [
     Simplex.PhaseOne.CPLEX,
 ]
 pivot_rules = [
-    Simplex.Bland,
-    Simplex.Steepest,
-    Simplex.Dantzig,
+    Simplex.BlandRule,
+    Simplex.SteepestEdgeRule,
+    Simplex.DantzigRule,
 ]
 
 function run_netlib_instance(netlib, use_gpu, method, pivot)::Simplex.AlgorithmStatus

@@ -15,6 +15,7 @@ const TO = TimerOutput()
 nrows(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 1)
 ncols(lp::MatOI.AbstractLPForm{T}) where T = size(lp.A, 2)
 
+include("types.jl")
 include("Parameters.jl")
 include("Status.jl")
 include("GLPK.jl")
@@ -60,8 +61,6 @@ mutable struct SpxData{T<:AbstractArray}
 
     iter::Int
     history::Vector{Vector{Int}}
-
-    pivot_rule::PivotRule
 
     # steepest-edge pivot only
     gamma::T # steepest-edge weights
@@ -121,8 +120,6 @@ mutable struct SpxData{T<:AbstractArray}
         spx.status = Solve
         spx.iter = 1
         spx.history = Vector{Vector{Int}}()
-
-        spx.pivot_rule = Dantzig
 
         return spx
     end
@@ -209,17 +206,7 @@ end
 
 function compute_entering_variable(spx::SpxData)
     @timeit TO "compute entering variable" begin
-        if spx.pivot_rule == Bland
-            pivot_Bland(spx)
-        elseif spx.pivot_rule == Steepest
-            pivot_steepest_edge(spx)
-        elseif spx.pivot_rule == Dantzig
-            pivot_Dantzig(spx)
-        elseif spx.pivot_rule == Artificial
-            pivot_to_remove_artificials(spx)
-        else
-            @error("Invalid pivot rule.")
-        end
+        pivot(spx.params.pivot_rule, spx)
     end
 end
 
@@ -270,9 +257,6 @@ function pivot(spx::SpxData)
                     best_t = spx.tu[i]
                     spx.leave = i
                 end
-                # if spx.pivot_rule == Artificial && spx.basic[i] < spx.start_artvars
-                #     spx.tu[i] = -Inf
-                # end
             end
             if best_t < spx.lpdata.v_lb[spx.enter] - spx.x[spx.enter] && best_t > -Inf
                 best_t = spx.lpdata.v_lb[spx.enter] - spx.lpdata.v_ub[spx.enter]
@@ -355,7 +339,7 @@ end
 
 function iterate(spx::SpxData)
     @timeit TO "One iteration" begin
-        if spx.iter % spx.params.print_iter_freq == 0 && spx.pivot_rule != Artificial
+        if spx.iter % spx.params.print_iter_freq == 0
             println("Iteration $(spx.iter): objective $(objective(spx))")
         end
 
@@ -374,7 +358,6 @@ function iterate(spx::SpxData)
         pivot(spx)
 
         if spx.leave < 0
-            # spx.status = spx.pivot_rule == Artificial ? Feasible : Unbounded
             spx.status = Unbounded
             return
         end
@@ -382,7 +365,7 @@ function iterate(spx::SpxData)
         # println("Update basis? ", spx.update)
 
         if spx.update
-            if spx.pivot_rule == Steepest
+            if spx.params.pivot_rule == SteepestEdgeRule
                 @timeit TO "compute v" begin
                     # compute v before changing basis
                     spx.v .= transpose(spx.invB) * spx.d
@@ -399,7 +382,7 @@ end
 
 function run(prob::MatOI.LPForm{T, AT, VT};
     basis::Vector{Int} = Int[],
-    pivot_rule::PivotRule = Dantzig,
+    pivot_rule::Type = DantzigRule,
     phase_one_method::PhaseOne.Method = PhaseOne.CPLEX,
     gpu = false,
     performance_io::IO = stdout) where {T, AT, VT}
@@ -456,7 +439,7 @@ function run(prob::MatOI.LPForm{T, AT, VT};
             else
                 println("Basis information is provided.")
                 spx = SpxData(processed_prob, TT)
-                spx.pivot_rule = pivot_rule
+                spx.params.pivot_rule = pivot_rule
                 set_basis(spx, basis)
             end
 
@@ -486,14 +469,14 @@ function run_core(spx::SpxData)
     # @show spx.x
 
     # main iterations
-    my_pivot_rule = spx.pivot_rule
+    my_pivot_rule = spx.params.pivot_rule
     while spx.status in [Solve, Cycle] && spx.iter < spx.params.max_iter
         # Use Bland's rule if cycle is detected
         if spx.status == Cycle
-            spx.pivot_rule = Bland
+            spx.params.pivot_rule = BlandRule
         end
         iterate(spx)
-        spx.pivot_rule = my_pivot_rule
+        spx.params.pivot_rule = my_pivot_rule
     end
 end
 

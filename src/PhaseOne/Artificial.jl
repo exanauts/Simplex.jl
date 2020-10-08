@@ -143,7 +143,7 @@ function run(prob::MatOI.LPSolverForm, Tv::Type; kwargs...)::Simplex.SpxData
 
     # load the problem
     spx = Simplex.SpxData(p1lp, Tv)
-    spx.pivot_rule = deepcopy(pivot_rule)
+    spx.params.pivot_rule = pivot_rule
 
     # set basis
     basic = collect((ncols(p1lp)-nrows(p1lp)+1):ncols(p1lp))
